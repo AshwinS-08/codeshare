@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 221 83% 60%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 221 83% 53%;
+
+    /* Custom CodeShare colors */
+    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%), hsl(256 77% 52%));
+    --gradient-background: linear-gradient(180deg, hsl(0 0% 100%), hsl(240 10% 98%));
+    --gradient-card: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+    
+    --code-bg: 240 10% 98%;
+    --code-border: 221 83% 85%;
+    --upload-area: 240 10% 99%;
+    --upload-border: 221 83% 80%;
+    --upload-hover: 221 83% 95%;
+    
+    --shadow-soft: 0 4px 12px -2px hsl(240 10% 3.9% / 0.05);
+    --shadow-medium: 0 6px 20px -4px hsl(240 10% 3.9% / 0.1);
+    --shadow-strong: 0 10px 30px -6px hsl(240 10% 3.9% / 0.15);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 99%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 221 83% 53%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 217 91% 60%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(262 83% 58%));
+    --gradient-background: linear-gradient(180deg, hsl(240 10% 3.9%), hsl(240 10% 6%));
+    --gradient-card: linear-gradient(145deg, rgba(30, 30, 35, 0.8), rgba(25, 25, 30, 0.4));
+    
+    --code-bg: 240 10% 8%;
+    --code-border: 217 91% 25%;
+    --upload-area: 240 10% 6%;
+    --upload-border: 217 91% 20%;
+    --upload-hover: 217 91% 15%;
+    
+    --shadow-soft: 0 4px 12px -2px hsl(0 0% 0% / 0.2);
+    --shadow-medium: 0 6px 20px -4px hsl(0 0% 0% / 0.3);
+    --shadow-strong: 0 10px 30px -6px hsl(0 0% 0% / 0.4);
+
+    --sidebar-background: 240 10% 6%;
+    --sidebar-foreground: 240 5% 85%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  
+  /* Code block styling */
+  pre {
+    @apply rounded-lg border bg-muted p-4 font-mono text-sm;
+  }
+  
+  code {
+    @apply relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold;
+  }
+  
+  pre code {
+    @apply p-0 text-sm;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-foreground/30;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
