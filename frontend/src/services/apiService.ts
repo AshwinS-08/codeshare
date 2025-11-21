@@ -1,6 +1,7 @@
 /* Frontend API service to talk to our Flask backend */
 
 import type { ShareCreateResponse, ShareRetrieveResponse } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 export const API_BASE: string = (import.meta as any).env?.VITE_API_BASE_URL || window.location.origin;
 
@@ -16,6 +17,14 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return {};
+  return { Authorization: `Bearer ${session.access_token}` };
+}
+
 export const apiService = {
   async getShareByCode(code: string): Promise<ShareRetrieveResponse> {
     const res = await fetch(`${API_BASE}/api/shares/${encodeURIComponent(code)}`);
@@ -24,16 +33,21 @@ export const apiService = {
 
   async createShare(opts: { text?: string; file?: File }): Promise<ShareCreateResponse> {
     // Prefer multipart when there's a file; else JSON
+    const authHeaders = await getAuthHeaders();
     if (opts.file) {
       const form = new FormData();
       form.append("file", opts.file);
       if (opts.text) form.append("text", opts.text);
-      const res = await fetch(`${API_BASE}/api/shares`, { method: "POST", body: form });
+      const res = await fetch(`${API_BASE}/api/shares`, {
+        method: "POST",
+        body: form,
+        headers: authHeaders,
+      });
       return handleResponse<ShareCreateResponse>(res);
     } else {
       const res = await fetch(`${API_BASE}/api/shares`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ text: opts.text || null }),
       });
       return handleResponse<ShareCreateResponse>(res);
@@ -46,7 +60,16 @@ export const apiService = {
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`Download failed with ${res.status}`);
     return res.blob();
-  }
+  },
+
+  async getMyStats(): Promise<{ total_shares: number; total_views: number }> {
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/api/me/stats`, {
+      method: "GET",
+      headers: authHeaders,
+    });
+    return handleResponse<{ total_shares: number; total_views: number }>(res);
+  },
 };
 
 export default apiService;

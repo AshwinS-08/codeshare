@@ -3,10 +3,8 @@ import { Retrieve } from '@/components/Retrieve';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { FileCode, Share2, Download, Zap, Lock, Clock } from 'lucide-react';
-
+import { UserStats } from '@/components/UserStats';
 const Index = () => {
-
-  
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
       {/* Hero Section */}
@@ -170,6 +168,10 @@ const Index = () => {
           </div>
         </Card>
         
+        <div className="max-w-4xl mx-auto mt-6">
+          <UserStats />
+        </div>
+
         {/* Additional Info */}
         <div className="mt-16 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-full text-sm font-medium mb-4">

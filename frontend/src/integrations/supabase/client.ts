@@ -2,8 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://duhvsdgkfmcauefmabje.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1aHZzZGdrZm1jYXVlZm1hYmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MjMxNDEsImV4cCI6MjA3MjA5OTE0MX0.8zklfAdmbWIZEz6A8IGs01Vn4956NGg0a5pCY7vfvXw";
+const SUPABASE_URL = "https://mnerbpfqqoramxvpdxbo.supabase.co";
+// Use the anon (public) key from the same project as the backend, not the service role key
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uZXJicGZxcW9yYW14dnBkeGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxMDg1NTIsImV4cCI6MjA3ODY4NDU1Mn0.BiwJr6BbYP3NHshcKZvBtvkcaNTtB3rVLkq6wPgz-UI";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

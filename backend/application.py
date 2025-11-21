@@ -148,6 +148,19 @@ def create_share():
     if err or client is None:
         return jsonify({"error": err or "Failed to create Supabase client"}), 500
 
+    # Try to resolve authenticated user from Authorization header (Supabase JWT)
+    auth_header = request.headers.get("Authorization", "")
+    user_id = None
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+        try:
+            # supabase-py v2 exposes auth.get_user(jwt)
+            uresp = client.auth.get_user(token)  # type: ignore[attr-defined]
+            user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None) or {}
+            user_id = user_obj.get("id")
+        except Exception as e:
+            logger.warning(f"Failed to resolve user from token: {e}")
+
     code = None
     text_content = None
     file_info = {"url": None, "name": None, "size": None, "path": None, "bucket": None}
@@ -240,6 +253,8 @@ def create_share():
             "file_size": file_info["size"],
             "file_url": file_info["url"],
         }
+        if user_id:
+            payload["user_id"] = user_id
         resp = client.table("shares").insert(payload).execute()
         data = getattr(resp, "data", None) if resp is not None else None
     except Exception as e:
@@ -283,6 +298,46 @@ def get_share(code: str):
         return jsonify(row), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@application.route("/api/me/stats", methods=["GET"])
+def get_my_stats():
+    """Return basic stats for the authenticated user: total shares and total views."""
+    client, err = create_client()
+    if err or client is None:
+        return jsonify({"error": err or "Failed to create Supabase client"}), 500
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing or invalid Authorization header"}), 401
+
+    token = auth_header.split(" ", 1)[1].strip()
+    try:
+        uresp = client.auth.get_user(token)  # type: ignore[attr-defined]
+        user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None) or {}
+        user_id = user_obj.get("id")
+    except Exception as e:
+        logger.warning(f"Failed to resolve user from token in stats: {e}")
+        user_id = None
+
+    if not user_id:
+        return jsonify({"error": "Invalid token"}), 401
+
+    try:
+        # Fetch all shares for this user and aggregate views client-side for simplicity
+        resp = client.table("shares").select("views", count="exact").eq("user_id", user_id).execute()
+        data = getattr(resp, "data", []) if resp is not None else []
+        total_shares = len(data)
+        total_views = 0
+        if isinstance(data, list):
+            for row in data:
+                try:
+                    total_views += int(row.get("views", 0))
+                except Exception:
+                    continue
+        return jsonify({"total_shares": total_shares, "total_views": total_views}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch stats: {e}"}), 500
 
 
 @application.route("/api/files/fetch", methods=["GET"])

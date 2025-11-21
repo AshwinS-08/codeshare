@@ -1,11 +1,107 @@
 import { Moon, Sun, Code, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const init = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        setUserEmail(session.user.email ?? null);
+      }
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        setUserEmail(newSession?.user.email ?? null);
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
+
+    init();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+    setAuthLoading(false);
+
+    if (error) {
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (session) {
+      toast({ title: "Logged in", description: "Welcome back!" });
+      setLoginOpen(false);
+      setLoginPassword("");
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: signupEmail,
+      password: signupPassword,
+    });
+    setAuthLoading(false);
+
+    if (error) {
+      toast({
+        title: "Signup failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Account created",
+      description: "You can now log in with your credentials.",
+    });
+    setSignupOpen(false);
+    setSignupPassword("");
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({ title: "Logged out" });
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl">
@@ -41,6 +137,102 @@ export function Header() {
         </nav>
         
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Auth controls (desktop) */}
+          <div className="hidden md:flex items-center gap-2 mr-2">
+            {userEmail ? (
+              <>
+                <span className="text-sm text-muted-foreground max-w-[160px] truncate">
+                  {userEmail}
+                </span>
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Login
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Login</DialogTitle>
+                      <DialogDescription>
+                        Sign in to save your activity to your account.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form className="space-y-4" onSubmit={handleLogin}>
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email">Email</Label>
+                        <Input
+                          id="login-email"
+                          type="email"
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="login-password">Password</Label>
+                        <Input
+                          id="login-password"
+                          type="password"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full" disabled={authLoading}>
+                        {authLoading ? "Please wait..." : "Login"}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={signupOpen} onOpenChange={setSignupOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">Sign up</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create account</DialogTitle>
+                      <DialogDescription>
+                        Create a new account to keep your content linked to you.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form className="space-y-4" onSubmit={handleSignup}>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email</Label>
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          value={signupEmail}
+                          onChange={(e) => setSignupEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Password</Label>
+                        <Input
+                          id="signup-password"
+                          type="password"
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full" disabled={authLoading}>
+                        {authLoading ? "Creating..." : "Sign up"}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </>
+            )}
+          </div>
+
           <Button
             variant="ghost"
             size="icon"
