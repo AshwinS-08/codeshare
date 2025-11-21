@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ShareView from "./pages/ShareView";
+import HowItWorks from "./pages/HowItWorks";
+import Docs from "./pages/Docs";
 import NotFound from "./pages/NotFound";
 import { MainLayout } from "@/components/MainLayout";
 
@@ -20,6 +22,8 @@ const App = () => (
           <Route element={<MainLayout />}>
             <Route path="/" element={<Index />} />
             <Route path="/share/:code" element={<ShareView />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/docs" element={<Docs />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
