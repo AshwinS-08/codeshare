@@ -1,10 +1,28 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Share } from '@/components/Share';
 import { Retrieve } from '@/components/Retrieve';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { FileCode, Share2, Download, Zap, Lock, Clock } from 'lucide-react';
 import { UserStats } from '@/components/UserStats';
+import { UserShares } from '@/components/UserShares';
 const Index = () => {
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
       {/* Hero Section */}
@@ -131,35 +149,35 @@ const Index = () => {
         <Card id="share" className="max-w-4xl mx-auto shadow-xl border border-border/50 overflow-hidden">
           <Tabs defaultValue="share" className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-none border-b bg-muted/50 h-14">
-              <TabsTrigger 
-                value="share" 
+              <TabsTrigger
+                value="share"
                 className="flex items-center gap-2 text-base font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-colors"
               >
                 <Share2 className="w-4 h-4" />
                 Share Content
               </TabsTrigger>
-              <TabsTrigger 
-                value="retrieve" 
+              <TabsTrigger
+                value="retrieve"
                 className="flex items-center gap-2 text-base font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Get Content
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="share" className="p-6 md:p-8">
               <div className="animate-slide-up">
                 <Share />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="retrieve" className="p-6 md:p-8">
               <div className="animate-slide-up">
                 <Retrieve />
               </div>
             </TabsContent>
           </Tabs>
-          
+
           <div className="px-6 py-4 border-t bg-muted/20 text-center text-sm text-muted-foreground">
             <div className="flex items-center justify-center gap-2">
               <Clock className="w-4 h-4" />
@@ -167,10 +185,8 @@ const Index = () => {
             </div>
           </div>
         </Card>
-        
-        <div className="max-w-4xl mx-auto mt-6">
-          <UserStats />
-        </div>
+
+
 
         {/* Additional Info */}
         <div className="mt-16 text-center">

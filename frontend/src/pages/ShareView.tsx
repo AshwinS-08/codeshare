@@ -16,7 +16,7 @@ interface ShareData {
   file_url?: string;
   created_at: string;
   expires_at: string;
-  views: number;
+  view_count: number;
   max_views?: number;
 }
 
@@ -39,11 +39,11 @@ export default function ShareView() {
         return;
       }
 
-        try {
-          const data = await apiService.getShareByCode(code);
-          setShareData(data as ShareData);
-          setLoading(false);
-        } catch (err) {
+      try {
+        const data = await apiService.getShareByCode(code);
+        setShareData(data as unknown as ShareData);
+        setLoading(false);
+      } catch (err) {
         setError('Failed to load share');
         setLoading(false);
       }
@@ -68,7 +68,7 @@ export default function ShareView() {
       try {
         setPreviewLoading(true);
         setPreviewError(null);
-        
+
         // Use file_url if available, otherwise construct fallback URL
         let fileUrl = shareData.file_url;
         if (!fileUrl && shareData.file_name) {
@@ -78,12 +78,12 @@ export default function ShareView() {
           const potentialPath = shareData.file_name.startsWith(codePrefix) ? shareData.file_name : `${codePrefix}-${shareData.file_name}`;
           fileUrl = `proxy:shared-files/${potentialPath}`;
         }
-        
+
         if (!fileUrl) {
           setPreviewError('File URL not available');
           return;
         }
-        
+
         const blob = await apiService.downloadFile(fileUrl);
         const url = window.URL.createObjectURL(blob);
         createdUrl = url;
@@ -123,7 +123,7 @@ export default function ShareView() {
         const potentialPath = shareData.file_name.startsWith(codePrefix) ? shareData.file_name : `${codePrefix}-${shareData.file_name}`;
         fileUrl = `proxy:shared-files/${potentialPath}`;
       }
-      
+
       if (!fileUrl) {
         throw new Error('File URL not available');
       }
@@ -131,12 +131,12 @@ export default function ShareView() {
       // Use the backend proxy endpoint for downloading
       const fetchUrl = new URL(`${API_BASE}/api/files/fetch`);
       fetchUrl.searchParams.set('url', fileUrl);
-      
+
       const response = await fetch(fetchUrl.toString());
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
       }
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -145,13 +145,13 @@ export default function ShareView() {
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      
+
       // Clean up
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }, 1000);
-      
+
       toast({ title: 'Download started' });
     } catch (err) {
       console.error('Download failed:', err);
@@ -185,12 +185,12 @@ export default function ShareView() {
     const now = new Date();
     const expires = new Date(shareData.expires_at);
     const diff = expires.getTime() - now.getTime();
-    
+
     if (diff <= 0) return 'Expired';
-    
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m remaining`;
     }
@@ -234,10 +234,10 @@ export default function ShareView() {
               Back to Home
             </Link>
           </Button>
-          
+
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
-              👁️ {shareData?.views} views
+              👁️ {shareData?.view_count} views
             </div>
             <div className="flex items-center gap-1 bg-secondary/50 px-3 py-1 rounded-full">
               <Clock className="w-4 h-4" />
@@ -289,7 +289,7 @@ export default function ShareView() {
                   <FileText className="w-5 h-5" />
                   <span className="font-medium">File Share</span>
                 </div>
-                
+
                 <div className="bg-muted/50 p-4 rounded-lg space-y-3 border">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>

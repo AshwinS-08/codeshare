@@ -11,7 +11,7 @@ export interface ShareRetrieveResponse {
   created_at: string;
   expires_at: string;
   max_views: number | null;
-  views: number;
+  view_count: number;
 }
 
 export interface ShareCreateResponse {
@@ -33,6 +33,16 @@ export interface ShareRequest {
   file_url?: string | null;
   expiry_hours?: number;
   max_views?: number | null;
+}
+
+export interface UserShare {
+  code: string;
+  content_type: 'text' | 'file';
+  file_name: string | null;
+  file_size: number | null;
+  file_url: string | null;
+  created_at?: string;
+  view_count?: number;
 }
 
 export interface ApiErrorResponse {

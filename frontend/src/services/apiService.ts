@@ -1,6 +1,6 @@
 /* Frontend API service to talk to our Flask backend */
 
-import type { ShareCreateResponse, ShareRetrieveResponse } from "./types";
+import type { ShareCreateResponse, ShareRetrieveResponse, UserShare } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
 export const API_BASE: string = (import.meta as any).env?.VITE_API_BASE_URL || window.location.origin;
@@ -37,18 +37,22 @@ export const apiService = {
     if (opts.file) {
       const form = new FormData();
       form.append("file", opts.file);
-      if (opts.text) form.append("text", opts.text);
       const res = await fetch(`${API_BASE}/api/shares`, {
         method: "POST",
         body: form,
         headers: authHeaders,
+        credentials: 'include',
       });
       return handleResponse<ShareCreateResponse>(res);
     } else {
       const res = await fetch(`${API_BASE}/api/shares`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({ text: opts.text || null }),
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: opts.text }),
+        credentials: 'include',
       });
       return handleResponse<ShareCreateResponse>(res);
     }
@@ -57,7 +61,9 @@ export const apiService = {
   async downloadFile(fileUrl: string): Promise<Blob> {
     const url = new URL(`${API_BASE}/api/files/fetch`);
     url.searchParams.set('url', fileUrl);
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), {
+      credentials: 'include',
+    });
     if (!res.ok) throw new Error(`Download failed with ${res.status}`);
     return res.blob();
   },
@@ -67,8 +73,19 @@ export const apiService = {
     const res = await fetch(`${API_BASE}/api/me/stats`, {
       method: "GET",
       headers: authHeaders,
+      credentials: 'include',
     });
     return handleResponse<{ total_shares: number; total_views: number }>(res);
+  },
+
+  async getMyShares(): Promise<{ shares: UserShare[] }> {
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/api/me/shares`, {
+      method: 'GET',
+      headers: authHeaders,
+      credentials: 'include',
+    });
+    return handleResponse<{ shares: UserShare[] }>(res);
   },
 };
 

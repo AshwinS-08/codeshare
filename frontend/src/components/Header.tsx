@@ -114,7 +114,7 @@ export function Header() {
             CodeShare
           </span>
         </div>
-        
+
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
           <a href="#features" className="transition-colors hover:text-foreground">
@@ -135,7 +135,7 @@ export function Header() {
             GitHub
           </a>
         </nav>
-        
+
         <div className="flex items-center gap-2 md:gap-3">
           {/* Auth controls (desktop) */}
           <div className="hidden md:flex items-center gap-2 mr-2">
@@ -144,6 +144,9 @@ export function Header() {
                 <span className="text-sm text-muted-foreground max-w-[160px] truncate">
                   {userEmail}
                 </span>
+                <Button variant="ghost" size="sm" asChild>
+                  <a href="/dashboard">Dashboard</a>
+                </Button>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
                   Logout
                 </Button>
@@ -246,7 +249,7 @@ export function Header() {
               <Moon className="h-5 w-5" />
             )}
           </Button>
-          
+
           {/* Mobile menu button */}
           <Button
             variant="ghost"
@@ -263,30 +266,30 @@ export function Header() {
           </Button>
         </div>
       </div>
-      
+
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t bg-background/95 backdrop-blur">
           <div className="container px-4 py-3 flex flex-col gap-3">
-            <a 
-              href="/" 
+            <a
+              href="/"
               className="py-2 text-sm font-medium transition-colors hover:text-primary"
               onClick={() => setMobileMenuOpen(false)}
             >
               Home
             </a>
-            <a 
-              href="https://github.com/lovable-dev/project-api" 
-              target="_blank" 
+            <a
+              href="https://github.com/lovable-dev/project-api"
+              target="_blank"
               rel="noopener noreferrer"
               className="py-2 text-sm font-medium transition-colors hover:text-primary"
               onClick={() => setMobileMenuOpen(false)}
             >
               GitHub
             </a>
-            <a 
-              href="https://docs.codeshare.dev" 
-              target="_blank" 
+            <a
+              href="https://docs.codeshare.dev"
+              target="_blank"
               rel="noopener noreferrer"
               className="py-2 text-sm font-medium transition-colors hover:text-primary"
               onClick={() => setMobileMenuOpen(false)}

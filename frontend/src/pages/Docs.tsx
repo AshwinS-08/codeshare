@@ -79,6 +79,21 @@ const Docs = () => {
             </Card>
 
             <Card className="p-6 space-y-3">
+              <h2 className="text-xl font-semibold">Dashboard</h2>
+              <p className="text-sm text-muted-foreground">
+                Private area for authenticated users at <code className="font-mono text-xs">/dashboard</code>.
+              </p>
+              <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                <li>
+                  Displays user statistics (total shares, total views).
+                </li>
+                <li>
+                  Lists all active shares created by the user with options to preview, copy link, or download.
+                </li>
+              </ul>
+            </Card>
+
+            <Card className="p-6 space-y-3">
               <h2 className="text-xl font-semibold">NotFound</h2>
               <p className="text-sm text-muted-foreground">
                 Fallback page for unknown routes. Shown when no route matches the URL.
@@ -162,6 +177,33 @@ const Docs = () => {
                       RPC is unavailable.
                     </li>
                     <li>Returns <code>404</code> when the share is missing or expired.</li>
+                  </ul>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-4">
+              <h2 className="text-xl font-semibold">User endpoints</h2>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <div>
+                  <p>
+                    <code className="font-mono text-xs">GET /api/me/stats</code>
+                  </p>
+                  <p className="mb-1">Get statistics for the authenticated user.</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Requires <code>Authorization: Bearer &lt;token&gt;</code> header.</li>
+                    <li>Returns total number of shares and total views across all shares.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p>
+                    <code className="font-mono text-xs">GET /api/me/shares</code>
+                  </p>
+                  <p className="mb-1">List all shares for the authenticated user.</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Requires <code>Authorization: Bearer &lt;token&gt;</code> header.</li>
+                    <li>Returns a list of shares with metadata (code, filename, views, etc.).</li>
                   </ul>
                 </div>
               </div>

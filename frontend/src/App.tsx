@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import ShareView from "./pages/ShareView";
 import HowItWorks from "./pages/HowItWorks";
 import Docs from "./pages/Docs";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import { MainLayout } from "@/components/MainLayout";
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/share/:code" element={<ShareView />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/docs" element={<Docs />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

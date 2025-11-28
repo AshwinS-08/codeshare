@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request, Response, make_response
 from flask_cors import CORS
 try:
     from flasgger import Swagger
@@ -32,13 +32,29 @@ _origins.update({
     "http://localhost:8081",
     "http://127.0.0.1:8081",
 })
-CORS(
-    application,
-    resources={r"/*": {"origins": list(_origins)}},
-    methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-    expose_headers=["Content-Disposition"],
-)
+
+# Initialize CORS with per-route configuration
+cors = CORS()
+cors.init_app(application, resources={
+    r"/api/*": {
+        "origins": list(_origins),
+        "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Content-Length", "Authorization"],
+        "max_age": 600  # Cache preflight response for 10 minutes
+    }
+})
+
+@application.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,PUT,DELETE')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
 
 # Swagger UI at /docs (optional)
 if Swagger is not None:
@@ -94,6 +110,131 @@ def supabase_health():
     )
     report["status"] = "ok" if ok else "degraded"
     return jsonify(report), 200
+
+
+@application.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    """Login with email and password."""
+    body = request.get_json() or {}
+    email = body.get("email")
+    password = body.get("password")
+    
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+        
+    client, err = create_client()
+    if err or client is None:
+        return jsonify({"error": err or "Failed to create Supabase client"}), 500
+        
+    try:
+        resp = client.auth.sign_in_with_password({"email": email, "password": password})
+        session = getattr(resp, "session", None)
+        user = getattr(resp, "user", None)
+        
+        if not session:
+            return jsonify({"error": "Login failed"}), 401
+            
+        return jsonify({
+            "access_token": getattr(session, "access_token", None),
+            "refresh_token": getattr(session, "refresh_token", None),
+            "user": {
+                "id": getattr(user, "id", None),
+                "email": getattr(user, "email", None)
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 401
+
+
+@application.route("/api/auth/signup", methods=["POST"])
+def auth_signup():
+    """Signup with email and password."""
+    body = request.get_json() or {}
+    email = body.get("email")
+    password = body.get("password")
+    
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+        
+    client, err = create_client()
+    if err or client is None:
+        return jsonify({"error": err or "Failed to create Supabase client"}), 500
+        
+    try:
+        resp = client.auth.sign_up({"email": email, "password": password})
+        user = getattr(resp, "user", None)
+        
+        if not user:
+            return jsonify({"error": "Signup failed"}), 400
+            
+        # Note: If email confirmation is enabled, session might be None
+        session = getattr(resp, "session", None)
+        
+        return jsonify({
+            "access_token": getattr(session, "access_token", None) if session else None,
+            "refresh_token": getattr(session, "refresh_token", None) if session else None,
+            "user": {
+                "id": getattr(user, "id", None),
+                "email": getattr(user, "email", None)
+            },
+            "message": "Signup successful. Please check your email for confirmation." if not session else "Signup successful"
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@application.route("/api/auth/logout", methods=["POST"])
+def auth_logout():
+    """Logout (invalidate session)."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"message": "Logged out"}), 200
+        
+    token = auth_header.split(" ", 1)[1].strip()
+    
+    client, err = create_client()
+    if err or client is None:
+        return jsonify({"error": err or "Failed to create Supabase client"}), 500
+        
+    try:
+        client.auth.sign_out(token)
+    except Exception:
+        pass
+        
+    return jsonify({"message": "Logged out"}), 200
+
+
+@application.route("/api/auth/user", methods=["GET"])
+def auth_user():
+    """Get current user details."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing token"}), 401
+        
+    token = auth_header.split(" ", 1)[1].strip()
+    
+    client, err = create_client()
+    if err or client is None:
+        return jsonify({"error": err or "Failed to create Supabase client"}), 500
+        
+    try:
+        uresp = client.auth.get_user(token)
+        user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None)
+        
+        if not user_obj:
+            return jsonify({"error": "Invalid token"}), 401
+            
+        user_id = getattr(user_obj, "id", None) or (user_obj.get("id") if isinstance(user_obj, dict) else None)
+        email = getattr(user_obj, "email", None) or (user_obj.get("email") if isinstance(user_obj, dict) else None)
+        
+        return jsonify({
+            "user": {
+                "id": user_id,
+                "email": email
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 401
 
 
 def _generate_code(length: int = 6) -> str:
@@ -157,7 +298,7 @@ def create_share():
             # supabase-py v2 exposes auth.get_user(jwt)
             uresp = client.auth.get_user(token)  # type: ignore[attr-defined]
             user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None) or {}
-            user_id = user_obj.get("id")
+            user_id = getattr(user_obj, "id", None) or (user_obj.get("id") if isinstance(user_obj, dict) else None)
         except Exception as e:
             logger.warning(f"Failed to resolve user from token: {e}")
 
@@ -315,7 +456,7 @@ def get_my_stats():
     try:
         uresp = client.auth.get_user(token)  # type: ignore[attr-defined]
         user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None) or {}
-        user_id = user_obj.get("id")
+        user_id = getattr(user_obj, "id", None) or (user_obj.get("id") if isinstance(user_obj, dict) else None)
     except Exception as e:
         logger.warning(f"Failed to resolve user from token in stats: {e}")
         user_id = None
@@ -325,19 +466,57 @@ def get_my_stats():
 
     try:
         # Fetch all shares for this user and aggregate views client-side for simplicity
-        resp = client.table("shares").select("views", count="exact").eq("user_id", user_id).execute()
+        resp = client.table("shares").select("view_count", count="exact").eq("user_id", user_id).execute()
         data = getattr(resp, "data", []) if resp is not None else []
         total_shares = len(data)
         total_views = 0
         if isinstance(data, list):
             for row in data:
                 try:
-                    total_views += int(row.get("views", 0))
+                    total_views += int(row.get("view_count", 0))
                 except Exception:
                     continue
         return jsonify({"total_shares": total_shares, "total_views": total_views}), 200
     except Exception as e:
         return jsonify({"error": f"Failed to fetch stats: {e}"}), 500
+
+
+@application.route("/api/me/shares", methods=["GET"])
+def get_my_shares():
+    """Return the list of shares for the authenticated user (primarily file uploads)."""
+    client, err = create_client()
+    if err or client is None:
+        return jsonify({"error": err or "Failed to create Supabase client"}), 500
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing or invalid Authorization header"}), 401
+
+    token = auth_header.split(" ", 1)[1].strip()
+    try:
+        uresp = client.auth.get_user(token)  # type: ignore[attr-defined]
+        user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None) or {}
+        user_id = getattr(user_obj, "id", None) or (user_obj.get("id") if isinstance(user_obj, dict) else None)
+    except Exception as e:
+        logger.warning(f"Failed to resolve user from token in shares: {e}")
+        user_id = None
+
+    if not user_id:
+        return jsonify({"error": "Invalid token"}), 401
+
+    try:
+        resp = (
+            client
+            .table("shares")
+            .select("code, content_type, file_name, file_size, file_url, created_at, view_count")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        data = getattr(resp, "data", []) if resp is not None else []
+        return jsonify({"shares": data}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch shares: {e}"}), 500
 
 
 @application.route("/api/files/fetch", methods=["GET"])
