@@ -173,13 +173,19 @@ export const Share = () => {
       // Handle file upload if there's a file
       if (fileToShare) {
         const res = await apiService.createShare({
-          ...shareData,
-          file: fileToShare
+          text: shareData.text,
+          file: fileToShare,
+          password: shareData.password,
+          metadata: shareData.metadata,
         });
         setGeneratedCode(res.code);
       } else {
         // Text/code only share
-        const res = await apiService.createShare(shareData);
+        const res = await apiService.createShare({
+          text: shareData.text,
+          password: shareData.password,
+          metadata: shareData.metadata,
+        });
         setGeneratedCode(res.code);
       }
       

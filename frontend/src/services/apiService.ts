@@ -26,17 +26,30 @@ async function getAuthHeaders(): Promise<HeadersInit> {
 }
 
 export const apiService = {
-  async getShareByCode(code: string): Promise<ShareRetrieveResponse> {
-    const res = await fetch(`${API_BASE}/api/shares/${encodeURIComponent(code)}`);
+  async getShareByCode(code: string, password?: string): Promise<ShareRetrieveResponse> {
+    const url = new URL(`${API_BASE}/api/shares/${encodeURIComponent(code)}`);
+    if (password) {
+      url.searchParams.set("password", password);
+    }
+    const res = await fetch(url.toString());
     return handleResponse<ShareRetrieveResponse>(res);
   },
 
-  async createShare(opts: { text?: string; file?: File }): Promise<ShareCreateResponse> {
+  async createShare(opts: { text?: string; file?: File; password?: string; metadata?: Record<string, any> }): Promise<ShareCreateResponse> {
     // Prefer multipart when there's a file; else JSON
     const authHeaders = await getAuthHeaders();
     if (opts.file) {
       const form = new FormData();
       form.append("file", opts.file);
+      if (typeof opts.text === "string" && opts.text.length > 0) {
+        form.append("text", opts.text);
+      }
+      if (opts.password) {
+        form.append("password", opts.password);
+      }
+      if (opts.metadata) {
+        form.append("metadata", JSON.stringify(opts.metadata));
+      }
       const res = await fetch(`${API_BASE}/api/shares`, {
         method: "POST",
         body: form,
@@ -45,13 +58,20 @@ export const apiService = {
       });
       return handleResponse<ShareCreateResponse>(res);
     } else {
+      const body: any = { text: opts.text };
+      if (opts.password) {
+        body.password = opts.password;
+      }
+      if (opts.metadata) {
+        body.metadata = opts.metadata;
+      }
       const res = await fetch(`${API_BASE}/api/shares`, {
         method: 'POST',
         headers: {
           ...authHeaders,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: opts.text }),
+        body: JSON.stringify(body),
         credentials: 'include',
       });
       return handleResponse<ShareCreateResponse>(res);

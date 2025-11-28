@@ -10,6 +10,7 @@ except Exception:  # pragma: no cover - optional import for docs
 
 from config import Config
 from supabase_client import connection_report, create_client, rpc_get_share_by_code
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # Logging
@@ -219,11 +220,7 @@ def auth_user():
         
     try:
         uresp = client.auth.get_user(token)
-        user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None)
-        
-        if not user_obj:
-            return jsonify({"error": "Invalid token"}), 401
-            
+        user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None) or {}
         user_id = getattr(user_obj, "id", None) or (user_obj.get("id") if isinstance(user_obj, dict) else None)
         email = getattr(user_obj, "email", None) or (user_obj.get("email") if isinstance(user_obj, dict) else None)
         
@@ -306,10 +303,26 @@ def create_share():
     text_content = None
     file_info = {"url": None, "name": None, "size": None, "path": None, "bucket": None}
     had_file = False
+    is_protected = False
+    password_hash = None
+    language = None
+    metadata: dict = {}
 
     if request.content_type and request.content_type.startswith("multipart/form-data"):
         code = request.form.get("code") or _generate_code()
         text_content = (request.form.get("text") or "").strip() or None
+        raw_password = (request.form.get("password") or "").strip()
+        if raw_password:
+            is_protected = True
+            password_hash = generate_password_hash(raw_password)
+        raw_metadata = (request.form.get("metadata") or "").strip()
+        if raw_metadata:
+            try:
+                import json as _json
+                metadata = _json.loads(raw_metadata)
+            except Exception:
+                metadata = {}
+
         uploaded = request.files.get("file")
         if uploaded and (uploaded.filename or uploaded.content_length):
             had_file = True
@@ -380,9 +393,21 @@ def create_share():
         body = request.get_json(silent=True) or {}
         code = body.get("code") or _generate_code()
         text_content = (body.get("text") or "").strip() or None
+        raw_password = (body.get("password") or "").strip()
+        if raw_password:
+            is_protected = True
+            password_hash = generate_password_hash(raw_password)
+        metadata = body.get("metadata") or {}
 
     # Mark as file when a file was provided, regardless of URL visibility
     content_type = "file" if had_file else "text"
+
+    # Extract language from metadata if present (for code/text shares)
+    try:
+        if isinstance(metadata, dict):
+            language = metadata.get("language")
+    except Exception:
+        language = None
 
     # Insert into shares table
     try:
@@ -393,7 +418,12 @@ def create_share():
             "file_name": file_info["name"],
             "file_size": file_info["size"],
             "file_url": file_info["url"],
+            "is_protected": is_protected,
+            "password_hash": password_hash,
+            "language": language,
+            "metadata": metadata,
         }
+
         if user_id:
             payload["user_id"] = user_id
         resp = client.table("shares").insert(payload).execute()
@@ -413,17 +443,46 @@ def create_share():
         "file_url": file_info["url"],
         "file_name": file_info["name"],
         "file_size": file_info["size"],
-        "row": data,
-        "status": "ok",
-    }), 201
+        "file_url": file_info["url"],
+        "is_protected": is_protected,
+        "password_hash": password_hash,
+        "language": language,
+        "metadata": metadata,
+    }
+
+    if user_id:
+        payload["user_id"] = user_id
+    resp = client.table("shares").insert(payload).execute()
+    data = getattr(resp, "data", None) if resp is not None else None
+except Exception as e:
+    msg = str(e)
+    if "row level security" in msg.lower() or "42501" in msg:
+        return jsonify({"error": "Insert blocked by RLS; ensure service role key is used on the backend and policies permit insert."}), 403
+    if "401" in msg or "unauthorized" in msg.lower():
+        return jsonify({"error": "Unauthorized to insert; check SUPABASE_SERVICE_ROLE_KEY is set and valid."}), 401
+    return jsonify({"error": f"Failed to create share: {msg}"}), 500
+
+return jsonify({
+    "code": code,
+    "content_type": content_type,
+    "text_content": text_content,
+    "file_url": file_info["url"],
+    "file_name": file_info["name"],
+    "file_size": file_info["size"],
+    "row": data,
+    "status": "ok",
+}), 201
 
 
 @application.route("/api/shares/<code>", methods=["GET"])
 def get_share(code: str):
     client, err = create_client()
+
     if err or client is None:
         return jsonify({"error": err or "Failed to create Supabase client"}), 500
     try:
+        requested_password = (request.args.get("password") or "").strip()
+
         # Prefer calling the RPC to respect business logic (expiry/views) if defined
         row, rpc_err = rpc_get_share_by_code(client, code)
         if rpc_err:
@@ -432,10 +491,20 @@ def get_share(code: str):
             data = getattr(resp, "data", []) if resp is not None else []
             if not data:
                 return jsonify({"error": "Not found"}), 404
-            return jsonify(data[0]), 200
+            row = data[0]
         # If RPC succeeded but returned no row (including all-null), treat as not found/expired
         if not row:
             return jsonify({"error": "Not found"}), 404
+
+        # Enforce password protection if enabled
+        is_protected = bool(row.get("is_protected"))
+        stored_hash = row.get("password_hash")
+        if is_protected:
+            if not requested_password or not stored_hash or not check_password_hash(stored_hash, requested_password):
+                return jsonify({"error": "Password required or incorrect", "locked": True}), 403
+
+        # When access is allowed, include explicit locked flag in response
+        row["locked"] = False
         return jsonify(row), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
