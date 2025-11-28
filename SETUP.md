@@ -1,25 +1,25 @@
-# Supabase Setup Guide
+# Storage Setup Guide
 
 This guide will help you set up the database and storage for your API application.
 
 ## Prerequisites
-- A Supabase project (create one at https://supabase.com)
-- Your Supabase URL and service role key from project settings
+- An AWS account with S3 access
+- Your storage URL and service role key from project settings
 
 ## Step 1: Database Table Setup
 
-### Option A: Using Supabase Dashboard (Recommended)
-1. Go to your Supabase project dashboard
+### Option A: Using Database Dashboard (Recommended)
+1. Go to your database dashboard
 2. Navigate to **SQL Editor**
 3. Run the contents of `database/schema.sql` to create the shares table
 4. Run the contents of `database/rls_policies.sql` to set up security policies
 
-### Option B: Using Supabase CLI
+### Option B: Using CLI
 ```bash
-# Install Supabase CLI if not already installed
+# Install CLI if not already installed
 npm install -g supabase
 
-# Login to Supabase
+# Login to service
 supabase login
 
 # Link to your project
@@ -32,7 +32,7 @@ supabase db push
 ## Step 2: Storage Bucket Setup
 
 ### Create the Storage Bucket
-1. In Supabase Dashboard, go to **Storage**
+1. In AWS S3 Dashboard, go to **Storage**
 2. Click **New bucket**
 3. Create a bucket with these settings:
    - **Name**: `shared-files`
@@ -46,14 +46,14 @@ supabase db push
 
 ## Step 3: Environment Configuration
 
-Update your `.env` file with your Supabase credentials:
+Update your `.env` file with your storage credentials:
 
 ```env
-# Supabase Configuration
-SUPABASE_URL=https://your-project-ref.supabase.co
+# Storage Configuration
+SUPABASE_URL=https://your-storage-endpoint.amazonaws.com
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-SUPABASE_KEY=your-anon-key
-SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_KEY=your-access-key
+SUPABASE_ANON_KEY=your-access-key
 ```
 
 ## Step 4: Verify Setup
@@ -61,7 +61,7 @@ SUPABASE_ANON_KEY=your-anon-key
 ### Test Database Connection
 Run your Flask application and test the health endpoint:
 ```bash
-curl http://localhost:5000/supabase/health
+curl http://localhost:5000/storage/health
 ```
 
 You should see a response like:
@@ -134,9 +134,9 @@ FROM shares;
 - Verify the policies allow the operations you need
 
 ### Connection Issues
-- Verify your Supabase URL is correct
+- Verify your storage URL is correct
 - Check that your API keys are valid and not expired
-- Ensure your network allows connections to Supabase
+- Ensure your network allows connections to AWS S3
 
 ## Security Notes
 

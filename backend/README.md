@@ -1,6 +1,6 @@
 # Backend API for Code Sharing Application
 
-A secure, scalable Flask API backend for the code-sharing application with Supabase integration.
+A secure, scalable Flask API backend for the code-sharing application with AWS S3 integration.
 
 ## Project Structure
 
@@ -18,7 +18,7 @@ backend/
 │   │   └── files.py         # File upload endpoints
 │   ├── services/
 │   │   ├── __init__.py
-│   │   ├── supabase_service.py  # Supabase integration
+│   │   ├── supabase_service.py  # Storage integration
 │   │   └── share_service.py     # Business logic
 │   └── utils/
 │       ├── __init__.py
@@ -33,8 +33,8 @@ backend/
 ## Features
 
 - ✅ Text and file sharing with generated codes
-- ✅ Secure Supabase integration
-- ✅ File upload to Supabase Storage
+- ✅ Secure AWS S3 integration
+- ✅ File upload to AWS S3 Storage
 - ✅ Expiry and view limit management
 - ✅ RESTful API design
 - ✅ Input validation and error handling
@@ -59,9 +59,9 @@ backend/
 ## Environment Variables
 
 ```
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_KEY=your_supabase_service_key
+STORAGE_URL=your_storage_url
+STORAGE_KEY=your_storage_access_key
+STORAGE_SERVICE_KEY=your_storage_service_key
 FLASK_ENV=production
 SECRET_KEY=your_secret_key
 ```

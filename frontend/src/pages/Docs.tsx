@@ -131,10 +131,10 @@ const Docs = () => {
                 </div>
                 <div>
                   <p>
-                    <code className="font-mono text-xs">GET /supabase/health</code>
+                    <code className="font-mono text-xs">GET /storage/health</code>
                   </p>
                   <p>
-                    Performs a deeper Supabase connectivity check, including auth health and optional
+                    Performs a deeper storage connectivity check, including auth health and optional
                     bucket listing when a service key is configured.
                   </p>
                 </div>
@@ -154,7 +154,7 @@ const Docs = () => {
                       Accepts <code>multipart/form-data</code> with optional <code>file</code> and
                       <code>text</code> fields, or JSON <code>{'{ text: string, code?: string }'}</code>.
                     </li>
-                    <li>Uploads files to the Supabase storage bucket and stores metadata in the</li>
+                    <li>Uploads files to the AWS S3 storage bucket and stores metadata in the</li>
                     <li>
                       Returns the generated code, content type, and file/text metadata on success
                       (<code>201 Created</code>).
@@ -217,16 +217,16 @@ const Docs = () => {
                     <code className="font-mono text-xs">GET /api/files/fetch?url=...</code>
                   </p>
                   <p className="mb-1">
-                    Backend proxy for downloading files without exposing Supabase storage URLs
+                    Backend proxy for downloading files without exposing AWS S3 storage URLs
                     directly to the client.
                   </p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>
                       Supports regular public URLs as well as <code>proxy:bucket/path</code> format,
-                      where the backend generates a signed URL or downloads via the Supabase client.
+                      where the backend generates a signed URL or downloads via the storage client.
                     </li>
                     <li>
-                      Validates that the host matches the configured <code>SUPABASE_URL</code> domain
+                      Validates that the host matches the configured <code>STORAGE_URL</code> domain
                       when using public URLs.
                     </li>
                     <li>
@@ -249,9 +249,9 @@ const Docs = () => {
               </p>
               <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
                 <li>
-                  <strong>Supabase</strong>:
-                  <code className="font-mono text-xs">SUPABASE_URL</code>,
-                  <code className="font-mono text-xs">SUPABASE_SERVICE_ROLE_KEY</code>, and
+                  <strong>AWS S3 Storage</strong>:
+                  <code className="font-mono text-xs">STORAGE_URL</code>,
+                  <code className="font-mono text-xs">STORAGE_SERVICE_KEY</code>, and
                   related keys configure DB and storage access.
                 </li>
                 <li>

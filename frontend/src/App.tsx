@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ShareView from "./pages/ShareView";
 import HowItWorks from "./pages/HowItWorks";
+import Features from "./pages/Features";
 import Docs from "./pages/Docs";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/share/:code" element={<ShareView />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/features" element={<Features />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Route>

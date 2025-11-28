@@ -1,12 +1,33 @@
-import { useState, useCallback, useEffect, ChangeEvent } from 'react';
+import React, { useState, useCallback, useEffect, ChangeEvent, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Copy, Check } from 'lucide-react';
+import { Upload, FileText, Code as CodeIcon, Lock, FileCode } from 'lucide-react';
 import { CodeDisplay } from '@/components/CodeDisplay';
 import { apiService } from '@/services/apiService';
+import MonacoEditor from '@monaco-editor/react';
+
+// Available programming languages for the code editor
+const CODE_EDITOR_LANGUAGES = [
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'java', label: 'Java' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'csharp', label: 'C#' },
+  { value: 'go', label: 'Go' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'ruby', label: 'Ruby' },
+  { value: 'php', label: 'PHP' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'json', label: 'JSON' },
+  { value: 'markdown', label: 'Markdown' },
+];
 
 export const Share = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -16,6 +37,12 @@ export const Share = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<'image' | 'pdf' | 'text' | 'other'>('other');
+  const [password, setPassword] = useState('');
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [activeTab, setActiveTab] = useState('text');
+  const [code, setCode] = useState('// Enter your code here\n// Select a language from the dropdown');
+  const [language, setLanguage] = useState('javascript');
+  const [fileName, setFileName] = useState('script.js');
   const { toast } = useToast();
 
   const generateCode = () => {
@@ -103,10 +130,20 @@ export const Share = () => {
   };
 
   const handleShare = async () => {
-    if (!file && !text.trim()) {
+    let contentToShare = text;
+    let fileToShare = file;
+
+    // If in code editor mode, create a file with the code
+    if (activeTab === 'code' && !file) {
+      const blob = new Blob([code], { type: 'text/plain' });
+      fileToShare = new File([blob], fileName || 'script.js', { type: 'text/plain' });
+      contentToShare = ''; // Clear text content when sharing code
+    }
+
+    if (!fileToShare && !contentToShare.trim() && !code.trim()) {
       toast({
         title: "Nothing to share",
-        description: "Please upload a file or enter some text",
+        description: "Please upload a file, enter some text, or write some code",
         variant: "destructive"
       });
       return;
@@ -115,24 +152,37 @@ export const Share = () => {
     setIsGenerating(true);
     
     try {
-      const code = generateCode();
-  let fileUrl: string | null = null;
-  let fileName: string | null = null;
-  let fileSize: number | null = null;
+      const shareCode = generateCode();
+      
+      // Prepare the share data
+      const shareData: any = { 
+        text: contentToShare,
+        password: isPasswordProtected ? password : undefined,
+        metadata: {}
+      };
 
-      // Handle file upload if there's a file
-      if (file) {
-        // We now delegate file upload to the backend
-        const res = await apiService.createShare({ file, text });
-        setGeneratedCode(res.code);
-        toast({ title: "Content uploaded!", description: "Your content is ready to share" });
-        setIsGenerating(false);
-        return;
+      // Add code editor metadata if in code mode
+      if (activeTab === 'code' && !fileToShare) {
+        shareData.metadata = {
+          isCode: true,
+          language: language,
+          fileName: fileName
+        };
       }
 
-      // Text-only share via backend
-      const res = await apiService.createShare({ text });
-      setGeneratedCode(res.code);
+      // Handle file upload if there's a file
+      if (fileToShare) {
+        const res = await apiService.createShare({
+          ...shareData,
+          file: fileToShare
+        });
+        setGeneratedCode(res.code);
+      } else {
+        // Text/code only share
+        const res = await apiService.createShare(shareData);
+        setGeneratedCode(res.code);
+      }
+      
       toast({ title: "Content uploaded!", description: "Your content is ready to share" });
     } catch (error) {
       toast({
@@ -159,113 +209,170 @@ export const Share = () => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-semibold mb-2">Share Your Content</h2>
-        <p className="text-muted-foreground">Upload a file or enter text to generate a shareable code</p>
+        <p className="text-muted-foreground">Upload a file, enter text, or write code to generate a shareable link</p>
       </div>
 
-      {/* File Upload Area */}
-      <Card 
-        className={`relative border-2 border-dashed transition-all duration-200 ${
-          isDragging 
-            ? 'border-primary bg-upload-hover' 
-            : 'border-upload-border bg-upload-area hover:border-primary/50'
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div className="p-8 text-center">
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            onChange={handleFileInput}
-          />
-          <label htmlFor="file-upload" className="cursor-pointer">
-            <Upload className="w-12 h-12 text-primary mx-auto mb-4" />
-            <p className="text-lg font-medium mb-2">
-              {file ? file.name : 'Drop files here or click to browse'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Maximum file size: 10MB'}
-            </p>
-          </label>
-          {file && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-4"
-              onClick={() => setFile(null)}
-            >
-              Remove File
-            </Button>
-          )}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="text" disabled={!!file}>
+            <FileText className="w-4 h-4 mr-2" /> Text
+          </TabsTrigger>
+          <TabsTrigger value="code" disabled={!!file}>
+            <CodeIcon className="w-4 h-4 mr-2" /> Code
+          </TabsTrigger>
+          <TabsTrigger value="file" onClick={() => setActiveTab('file')}>
+            <FileCode className="w-4 h-4 mr-2" /> File
+          </TabsTrigger>
+        </TabsList>
 
-          {previewUrl && (
-            <div className="mt-6 text-left">
-              <p className="text-sm font-medium mb-2">Preview</p>
-              <div className="bg-background border rounded p-2">
-                {previewKind === 'image' && (
-                  <img src={previewUrl} alt={file?.name || 'preview'} className="max-h-96 mx-auto rounded" />
-                )}
-                {previewKind === 'pdf' && (
-                  <object data={previewUrl} type="application/pdf" className="w-full h-96 rounded" />
-                )}
-                {previewKind === 'text' && (
-                  <iframe src={previewUrl} title="preview" className="w-full h-80 bg-background rounded" />
-                )}
-                {previewKind === 'other' && (
-                  <p className="text-sm text-muted-foreground">Preview not available for this file type.</p>
-                )}
-              </div>
+        <TabsContent value="file">
+          <Card 
+            className={`relative border-2 border-dashed transition-all duration-200 ${
+              isDragging 
+                ? 'border-primary bg-upload-hover' 
+                : 'border-upload-border bg-upload-area hover:border-primary/50'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="p-8 text-center">
+              <input
+                type="file"
+                id="file-upload"
+                className="hidden"
+                onChange={handleFileInput}
+              />
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <Upload className="w-12 h-12 text-primary mx-auto mb-4" />
+                <p className="text-lg font-medium mb-2">
+                  {file ? file.name : 'Drop files here or click to browse'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Maximum file size: 10MB'}
+                </p>
+              </label>
+              {file && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-4"
+                  onClick={() => setFile(null)}
+                >
+                  Remove File
+                </Button>
+              )}
             </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="text">
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Paste your text here..."
+            className="min-h-[200px] font-mono text-sm"
+            disabled={!!file}
+          />
+        </TabsContent>
+
+        <TabsContent value="code" className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="filename">File Name</Label>
+              <Input
+                id="filename"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                placeholder="script.js"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="language">Language</Label>
+              <select
+                id="language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {CODE_EDITOR_LANGUAGES.map((lang) => (
+                  <option key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="rounded-md border overflow-hidden h-[300px] bg-gray-100 dark:bg-gray-800">
+            <MonacoEditor
+              height="100%"
+              language={language}
+              theme="vs-dark"
+              value={code}
+              onChange={(value) => setCode(value || '')}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                wordWrap: 'on',
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                renderWhitespace: 'selection',
+                lineNumbers: 'on',
+                renderLineHighlight: 'all',
+                readOnly: false,
+                folding: true,
+                lineNumbersMinChars: 3,
+                contextmenu: true,
+                scrollbar: {
+                  vertical: 'auto',
+                  horizontal: 'auto'
+                }
+              }}
+              loading={
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Loading editor...
+                </div>
+              }
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="password-protect"
+              checked={isPasswordProtected}
+              onChange={(e) => setIsPasswordProtected(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <Label htmlFor="password-protect" className="flex items-center">
+              <Lock className="w-4 h-4 mr-2" /> Password Protect
+            </Label>
+          </div>
+          {isPasswordProtected && (
+            <Input
+              type="password"
+              placeholder="Enter a password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-2"
+            />
           )}
         </div>
-      </Card>
 
-      <div className="text-center text-muted-foreground font-medium">OR</div>
-
-      {/* Text Input */}
-      <div className="space-y-2">
-        <Label htmlFor="text-content" className="text-base font-medium">Enter Text</Label>
-        <Textarea
-          id="text-content"
-          placeholder="Paste your text here..."
-          value={text}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-            setText(e.target.value);
-            if (e.target.value.trim() && file) {
-              setFile(null); // Clear file when text is entered
-            }
-          }}
-          className="min-h-[120px] resize-none"
-          disabled={!!file}
-        />
-        {text && (
-          <p className="text-sm text-muted-foreground">
-            {text.length} characters
-          </p>
-        )}
+        <Button 
+          className="w-full" 
+          size="lg" 
+          onClick={handleShare}
+          disabled={isGenerating || (!file && !text.trim() && !code.trim())}
+        >
+          {isGenerating ? 'Generating...' : 'Generate Share Link'}
+        </Button>
       </div>
-
-      {/* Generate Button */}
-      <Button 
-        onClick={handleShare}
-        disabled={isGenerating || (!file && !text.trim())}
-        className="w-full h-12 text-lg font-medium"
-        size="lg"
-      >
-        {isGenerating ? (
-          <>
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-            Uploading...
-          </>
-        ) : (
-          <>
-            <FileText className="w-5 h-5 mr-2" />
-            Upload & Share
-          </>
-        )}
-      </Button>
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { Share } from '@/components/Share';
 import { Retrieve } from '@/components/Retrieve';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import { FileCode, Share2, Download, Zap, Lock, Clock } from 'lucide-react';
+import { Share2, Download, Lock, FileText, Code, LockKeyhole,Clock,Zap } from 'lucide-react';
 import { UserStats } from '@/components/UserStats';
 import { UserShares } from '@/components/UserShares';
 const Index = () => {

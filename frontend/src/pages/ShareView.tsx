@@ -4,7 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiService, API_BASE } from '../services/apiService';
-import { FileText, Download, ArrowLeft, Clock, Copy } from 'lucide-react';
+import { QRCodeGenerator } from '@/components/QRCodeGenerator';
+import { FileText, Download, ArrowLeft, Clock, Copy, Share2, QrCode as QrCodeIcon } from 'lucide-react';
 
 interface ShareData {
   id: string;
@@ -29,7 +30,19 @@ export default function ShareView() {
   const [previewKind, setPreviewKind] = useState<'image' | 'pdf' | 'text' | 'other'>('other');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [showQR, setShowQR] = useState(false);
   const { toast } = useToast();
+
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      toast({
+        title: '✅ Link copied!',
+        description: 'Share link has been copied to clipboard'
+      });
+    });
+  };
 
   useEffect(() => {
     const fetchShareData = async () => {
@@ -224,11 +237,11 @@ export default function ShareView() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-4">
-      <div className="max-w-4xl mx-auto py-8 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-violet-500/5 to-pink-500/5 p-4">
+      <div className="max-w-6xl mx-auto py-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" asChild className="rounded-full">
+        <div className="flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
+          <Button variant="ghost" asChild className="rounded-full hover:bg-violet-500/10">
             <Link to="/">
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
@@ -236,119 +249,215 @@ export default function ShareView() {
           </Button>
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 bg-violet-500/10 px-3 py-1 rounded-full border border-violet-500/20">
               👁️ {shareData?.view_count} views
             </div>
-            <div className="flex items-center gap-1 bg-secondary/50 px-3 py-1 rounded-full">
+            <div className="flex items-center gap-1 bg-pink-500/10 px-3 py-1 rounded-full border border-pink-500/20">
               <Clock className="w-4 h-4" />
               {getTimeRemaining()}
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="space-y-6">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold mb-2">Shared Content</h1>
-            <p className="text-muted-foreground">Code: {shareData?.code}</p>
-          </div>
+        {/* Content Grid */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content - Left Side */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-violet-600 via-pink-600 to-amber-600 bg-clip-text text-transparent">
+                Shared Content
+              </h1>
+              <p className="text-muted-foreground">Code: <span className="font-mono font-bold text-foreground">{shareData?.code}</span></p>
+            </div>
 
-          {shareData?.content_type === 'text' ? (
-            <Card className="p-6 shadow-sm">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <FileText className="w-5 h-5" />
-                  <span className="font-medium">Text Content</span>
+            {shareData?.content_type === 'text' ? (
+              <Card className="p-6 shadow-lg border-violet-500/20 hover:shadow-xl hover:shadow-violet-500/10 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-violet-600">
+                    <FileText className="w-5 h-5" />
+                    <span className="font-medium">Text Content</span>
+                  </div>
+                  <div className="bg-gradient-to-br from-muted/50 to-muted/30 p-4 rounded-lg border">
+                    <pre className="whitespace-pre-wrap text-sm font-mono">
+                      {shareData.text_content}
+                    </pre>
+                  </div>
+                  <div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (!shareData?.text_content) return;
+                        navigator.clipboard.writeText(shareData.text_content).then(() => {
+                          toast({ title: '✅ Text copied to clipboard' });
+                        });
+                      }}
+                      className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Copy Text
+                    </Button>
+                  </div>
                 </div>
-                <div className="bg-muted/50 p-4 rounded-lg border">
-                  <pre className="whitespace-pre-wrap text-sm font-mono">
-                    {shareData.text_content}
-                  </pre>
+              </Card>
+            ) : (
+              <Card className="p-6 shadow-lg border-violet-500/20 hover:shadow-xl hover:shadow-violet-500/10 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-violet-600">
+                    <FileText className="w-5 h-5" />
+                    <span className="font-medium">File Share</span>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-muted/50 to-muted/30 p-4 rounded-lg space-y-3 border">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-lg">{shareData?.file_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {shareData?.file_size ? formatFileSize(shareData.file_size) : 'Unknown size'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button onClick={downloadFile} className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 shadow-lg shadow-violet-500/20">
+                          <Download className="w-4 h-4" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                    {(previewLoading || previewUrl || previewError) && (
+                      <div className="mt-3 bg-background rounded-lg p-3 border">
+                        {previewLoading && (
+                          <div className="w-full h-40 flex items-center justify-center text-sm text-muted-foreground">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                          </div>
+                        )}
+                        {previewError && !previewLoading && (
+                          <p className="text-sm text-muted-foreground">{previewError}</p>
+                        )}
+                        {previewKind === 'image' && (
+                          <img src={previewUrl || undefined} alt={shareData?.file_name || 'preview'} className="max-h-80 mx-auto rounded-md shadow-lg" />
+                        )}
+                        {previewKind === 'pdf' && (
+                          <object data={previewUrl || undefined} type="application/pdf" className="w-full h-80 rounded-md" />
+                        )}
+                        {previewKind === 'text' && (
+                          <div className="bg-muted p-3 rounded-md max-h-60 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap text-sm font-mono">
+                              Preview of {shareData?.file_name}
+                            </pre>
+                          </div>
+                        )}
+                        {previewKind === 'other' && (
+                          <p className="text-sm text-muted-foreground">Preview not available for this file type.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      if (!shareData?.text_content) return;
-                      navigator.clipboard.writeText(shareData.text_content).then(() => {
-                        toast({ title: 'Text copied to clipboard' });
-                      });
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <Copy className="w-4 h-4" />
-                    Copy Text
-                  </Button>
-                </div>
+              </Card>
+            )}
+
+            {/* Share Info */}
+            <Card className="p-6 bg-gradient-to-br from-violet-500/10 to-pink-500/10 border-violet-500/20 rounded-xl animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  📅 Shared on {new Date(shareData?.created_at || '').toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  ⏰ This content will be automatically deleted when it expires
+                </p>
               </div>
             </Card>
-          ) : (
-            <Card className="p-6 shadow-sm">
+          </div>
+
+          {/* Sidebar - Right Side */}
+          <div className="space-y-6">
+            {/* Share Actions */}
+            <Card className="p-6 bg-gradient-to-br from-violet-500/10 to-pink-500/10 border-violet-500/20 shadow-lg animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <FileText className="w-5 h-5" />
-                  <span className="font-medium">File Share</span>
+                <div className="flex items-center gap-2 text-violet-600">
+                  <Share2 className="w-5 h-5" />
+                  <h3 className="font-semibold">Share Options</h3>
                 </div>
 
-                <div className="bg-muted/50 p-4 rounded-lg space-y-3 border">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <p className="font-medium">{shareData?.file_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {shareData?.file_size ? formatFileSize(shareData.file_size) : 'Unknown size'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button onClick={downloadFile} className="flex items-center gap-2">
-                        <Download className="w-4 h-4" />
-                        Download
-                      </Button>
-                    </div>
+                <Button
+                  onClick={copyShareLink}
+                  className="w-full bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 shadow-lg shadow-violet-500/20"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Share Link
+                </Button>
+
+                <Button
+                  onClick={() => setShowQR(!showQR)}
+                  variant="outline"
+                  className="w-full border-violet-500/30 hover:bg-violet-500/10"
+                >
+                  <QrCodeIcon className="w-4 h-4 mr-2" />
+                  {showQR ? 'Hide' : 'Show'} QR Code
+                </Button>
+              </div>
+            </Card>
+
+            {/* QR Code */}
+            {showQR && (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                <QRCodeGenerator url={shareUrl} title="Scan to View" />
+              </div>
+            )}
+
+            {/* Stats Card */}
+            <Card className="p-6 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20 shadow-lg animate-in fade-in slide-in-from-right-4 duration-500 delay-100">
+              <div className="space-y-4">
+                <h3 className="font-semibold flex items-center gap-2 text-emerald-600">
+                  <span className="text-2xl">📊</span>
+                  Statistics
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-background/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Total Views</span>
+                    <span className="font-bold text-lg">{shareData?.view_count || 0}</span>
                   </div>
-                  {(previewLoading || previewUrl || previewError) && (
-                    <div className="mt-3 bg-background rounded-lg p-3 border">
-                      {previewLoading && (
-                        <div className="w-full h-40 flex items-center justify-center text-sm text-muted-foreground">
-                          Loading preview...
-                        </div>
-                      )}
-                      {previewError && !previewLoading && (
-                        <p className="text-sm text-muted-foreground">{previewError}</p>
-                      )}
-                      {previewKind === 'image' && (
-                        <img src={previewUrl || undefined} alt={shareData?.file_name || 'preview'} className="max-h-80 mx-auto rounded-md" />
-                      )}
-                      {previewKind === 'pdf' && (
-                        <object data={previewUrl || undefined} type="application/pdf" className="w-full h-80 rounded-md" />
-                      )}
-                      {previewKind === 'text' && (
-                        <div className="bg-muted p-3 rounded-md max-h-60 overflow-y-auto">
-                          <pre className="whitespace-pre-wrap text-sm font-mono">
-                            Preview of {shareData?.file_name}
-                          </pre>
-                        </div>
-                      )}
-                      {previewKind === 'other' && (
-                        <p className="text-sm text-muted-foreground">Preview not available for this file type.</p>
-                      )}
+                  <div className="flex justify-between items-center p-3 bg-background/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Type</span>
+                    <span className="font-medium capitalize">{shareData?.content_type}</span>
+                  </div>
+                  {shareData?.max_views && (
+                    <div className="flex justify-between items-center p-3 bg-background/50 rounded-lg">
+                      <span className="text-sm text-muted-foreground">Max Views</span>
+                      <span className="font-medium">{shareData.max_views}</span>
                     </div>
                   )}
                 </div>
               </div>
             </Card>
-          )}
 
-          {/* Share Info */}
-          <Card className="p-4 bg-muted/50 rounded-xl">
-            <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Shared on {new Date(shareData?.created_at || '').toLocaleDateString()}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                This content will be automatically deleted when it expires
-              </p>
-            </div>
-          </Card>
+            {/* Security Info */}
+            <Card className="p-6 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20 shadow-lg animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2 text-amber-600">
+                  <span className="text-2xl">🔒</span>
+                  Security
+                </h3>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-500">✓</span>
+                    <span>End-to-end encrypted</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-500">✓</span>
+                    <span>Auto-expires after time limit</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-500">✓</span>
+                    <span>Secure file storage</span>
+                  </li>
+                </ul>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
