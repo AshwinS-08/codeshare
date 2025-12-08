@@ -1,6 +1,6 @@
 /* Frontend API service to talk to our Flask backend */
 
-import type { ShareCreateResponse, ShareRetrieveResponse, UserShare } from "./types";
+import type { ShareCreateResponse, ShareRetrieveResponse, UserShare, AnalyticsData, ActivityResponse } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
 export const API_BASE: string = (import.meta as any).env?.VITE_API_BASE_URL || window.location.origin;
@@ -11,7 +11,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
     try {
       const json = await res.json();
       if (json?.error) msg = json.error;
-    } catch {}
+    } catch { }
     throw new Error(msg);
   }
   return res.json() as Promise<T>;
@@ -106,6 +106,26 @@ export const apiService = {
       credentials: 'include',
     });
     return handleResponse<{ shares: UserShare[] }>(res);
+  },
+
+  async getMyAnalytics(): Promise<AnalyticsData> {
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/api/me/analytics`, {
+      method: 'GET',
+      headers: authHeaders,
+      credentials: 'include',
+    });
+    return handleResponse<AnalyticsData>(res);
+  },
+
+  async getMyActivity(): Promise<ActivityResponse> {
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/api/me/activity`, {
+      method: 'GET',
+      headers: authHeaders,
+      credentials: 'include',
+    });
+    return handleResponse<ActivityResponse>(res);
   },
 };
 

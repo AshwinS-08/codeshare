@@ -3,6 +3,8 @@ import time
 import logging
 from flask import Flask, jsonify, request, Response, make_response
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 try:
     from flasgger import Swagger
 except Exception:  # pragma: no cover - optional import for docs
@@ -46,6 +48,24 @@ cors.init_app(application, resources={
         "max_age": 600  # Cache preflight response for 10 minutes
     }
 })
+
+# Initialize Rate Limiter
+limiter = Limiter(
+    app=application,
+    key_func=get_remote_address,  # Rate limit by IP address
+    default_limits=["200 per day", "50 per hour"],  # Global limits
+    storage_uri="memory://",  # Use in-memory storage (upgrade to Redis for production)
+    strategy="fixed-window",  # Count requests in fixed time windows
+)
+
+# Add custom error handler for rate limit exceeded
+@application.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({
+        "error": "Rate limit exceeded",
+        "message": "Too many requests. Please try again later.",
+        "retry_after": e.description
+    }), 429
 
 @application.before_request
 def handle_preflight():
@@ -114,6 +134,7 @@ def supabase_health():
 
 
 @application.route("/api/auth/login", methods=["POST"])
+@limiter.limit("5 per minute")  # Strict limit to prevent brute force attacks
 def auth_login():
     """Login with email and password."""
     body = request.get_json() or {}
@@ -148,6 +169,7 @@ def auth_login():
 
 
 @application.route("/api/auth/signup", methods=["POST"])
+@limiter.limit("3 per hour")  # Prevent spam account creation
 def auth_signup():
     """Signup with email and password."""
     body = request.get_json() or {}
@@ -239,7 +261,64 @@ def _generate_code(length: int = 6) -> str:
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
 
 
-@application.route("/api/shares", methods=["POST"]) 
+# Dangerous file extensions that should never be allowed
+BLOCKED_EXTENSIONS = {
+    'exe', 'bat', 'sh', 'cmd', 'com', 'scr', 'vbs', 'js', 
+    'jar', 'app', 'deb', 'rpm', 'dmg', 'pkg', 'msi',
+    'ps1', 'psm1', 'psd1', 'vb', 'wsf', 'wsh', 'cpl'
+}
+
+# Allowed file extensions (whitelist approach - more secure)
+ALLOWED_EXTENSIONS = {
+    # Documents
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
+    'txt', 'rtf', 'csv', 'md', 'log',
+    # Images
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico', 'tiff', 'tif',
+    # Videos
+    'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v',
+    # Audio
+    'mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'wma',
+    # Archives
+    'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz',
+    # Code (safe text-based)
+    'html', 'css', 'json', 'xml', 'yaml', 'yml', 'ini', 'cfg',
+    'py', 'java', 'cpp', 'c', 'h', 'rs', 'go', 'rb', 'php',
+    'ts', 'tsx', 'jsx', 'vue', 'sql', 'r', 'swift', 'kt',
+    # Others
+    'iso', 'torrent'
+}
+
+
+def validate_file_extension(filename: str) -> tuple[bool, str]:
+    """
+    Validate file extension for security.
+    Returns (is_valid, error_message)
+    
+    Uses both blacklist (dangerous files) and whitelist (allowed files) approach.
+    """
+    if not filename or '.' not in filename:
+        return False, "Invalid filename or missing extension"
+    
+    # Get extension (lowercase)
+    ext = filename.rsplit('.', 1)[-1].lower().strip()
+    
+    # Check against blacklist first (most dangerous)
+    if ext in BLOCKED_EXTENSIONS:
+        logger.warning(f"Blocked dangerous file extension: .{ext} for file: {filename}")
+        return False, f"File type '.{ext}' is not allowed for security reasons"
+    
+    # Check against whitelist (optional - can be disabled if too restrictive)
+    if ext not in ALLOWED_EXTENSIONS:
+        logger.warning(f"File extension not in whitelist: .{ext} for file: {filename}")
+        return False, f"File type '.{ext}' is not supported. Allowed types: documents, images, videos, archives, and code files"
+    
+    return True, "Valid"
+
+
+
+@application.route("/api/shares", methods=["POST"])
+@limiter.limit("10 per minute")  # Prevent share spam
 def create_share():
     """Create a new share.
 
@@ -326,6 +405,13 @@ def create_share():
         uploaded = request.files.get("file")
         if uploaded and (uploaded.filename or uploaded.content_length):
             had_file = True
+            
+            # Validate file extension first (security check)
+            filename = uploaded.filename or f"upload-{int(time.time())}"
+            is_valid, error_msg = validate_file_extension(filename)
+            if not is_valid:
+                return jsonify({"error": error_msg}), 400
+            
             # Validate file size
             uploaded.seek(0, os.SEEK_END)
             size = uploaded.tell()
@@ -334,7 +420,7 @@ def create_share():
                 return jsonify({"error": "File too large"}), 400
 
             # Build path and upload
-            name = uploaded.filename or f"upload-{int(time.time())}"
+            name = filename
             ext = (name.rsplit('.', 1)[-1] if '.' in name else 'bin')
             path = f"{code}-{int(time.time())}.{ext}"
             bucket = "shared-files"
@@ -485,10 +571,9 @@ def get_share(code: str):
         # When access is allowed, update view count and include explicit locked flag in response
         try:
             # Increment view count
-            client.table("shares").update({"view_count": row.get("view_count", 0) + 1, "updated_at": "now()"}).eq("code", code.upper()).execute()
+            client.table("shares").update({"view_count": row.get("view_count", 0) + 1}).eq("code", code.upper()).execute()
             # Update the row data with new view count
             row["view_count"] = row.get("view_count", 0) + 1
-            row["updated_at"] = "now()"
         except Exception as e:
             logger.warning(f"Failed to update view count: {e}")
         
@@ -565,12 +650,163 @@ def get_my_shares():
         resp = (
             client
             .table("shares")
-            .select("code, content_type, file_name, file_size, file_url, created_at, updated_at, view_count")
+            .select("code, content_type, file_name, file_size, file_url, created_at, view_count")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
             .execute()
         )
-             OR proxy:bucket/path format for backend storage access
+        data = getattr(resp, "data", []) if resp is not None else []
+        return jsonify({"shares": data}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch shares: {e}"}), 500
+
+
+@application.route("/api/me/analytics", methods=["GET"])
+def get_my_analytics():
+    """Return detailed analytics data for the authenticated user."""
+    client, err = create_client()
+    if err or client is None:
+        return jsonify({"error": err or "Failed to create Supabase client"}), 500
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing or invalid Authorization header"}), 401
+
+    token = auth_header.split(" ", 1)[1].strip()
+    try:
+        uresp = client.auth.get_user(token)
+        user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None) or {}
+        user_id = getattr(user_obj, "id", None) or (user_obj.get("id") if isinstance(user_obj, dict) else None)
+    except Exception as e:
+        logger.warning(f"Failed to resolve user from token in analytics: {e}")
+        user_id = None
+
+    if not user_id:
+        return jsonify({"error": "Invalid token"}), 401
+
+    try:
+        # Fetch all shares for this user
+        resp = client.table("shares").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        data = getattr(resp, "data", []) if resp is not None else []
+        
+        # Calculate analytics
+        total_shares = len(data)
+        total_views = sum(int(row.get("view_count", 0)) for row in data)
+        
+        # Content type distribution
+        content_types = {}
+        for row in data:
+            ct = row.get("content_type", "unknown")
+            content_types[ct] = content_types.get(ct, 0) + 1
+        
+        # Views over time (last 30 days)
+        from datetime import datetime, timedelta
+        
+        views_by_date = {}
+        now = datetime.utcnow()
+        for i in range(30):
+            date = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+            views_by_date[date] = 0
+        
+        # Top shares by views
+        top_shares = sorted(data, key=lambda x: int(x.get("view_count", 0)), reverse=True)[:5]
+        top_shares_data = [
+            {
+                "code": share.get("code"),
+                "views": int(share.get("view_count", 0)),
+                "type": share.get("content_type"),
+                "name": share.get("file_name") or "Text Share"
+            }
+            for share in top_shares
+        ]
+        
+        # Recent shares (last 7 days)
+        seven_days_ago = now - timedelta(days=7)
+        recent_count = sum(
+            1 for row in data 
+            if datetime.fromisoformat(row.get("created_at", "").replace("Z", "+00:00")) > seven_days_ago
+        ) if data else 0
+        
+        return jsonify({
+            "total_shares": total_shares,
+            "total_views": total_views,
+            "avg_views": round(total_views / total_shares, 2) if total_shares > 0 else 0,
+            "recent_shares": recent_count,
+            "content_types": content_types,
+            "views_by_date": views_by_date,
+            "top_shares": top_shares_data
+        }), 200
+    except Exception as e:
+        logger.error(f"Failed to fetch analytics: {e}")
+        return jsonify({"error": f"Failed to fetch analytics: {e}"}), 500
+
+
+@application.route("/api/me/activity", methods=["GET"])
+def get_my_activity():
+    """Return activity feed for the authenticated user."""
+    client, err = create_client()
+    if err or client is None:
+        return jsonify({"error": err or "Failed to create Supabase client"}), 500
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing or invalid Authorization header"}), 401
+
+    token = auth_header.split(" ", 1)[1].strip()
+    try:
+        uresp = client.auth.get_user(token)
+        user_obj = getattr(uresp, "user", None) or getattr(uresp, "data", None) or {}
+        user_id = getattr(user_obj, "id", None) or (user_obj.get("id") if isinstance(user_obj, dict) else None)
+    except Exception as e:
+        logger.warning(f"Failed to resolve user from token in activity: {e}")
+        user_id = None
+
+    if not user_id:
+        return jsonify({"error": "Invalid token"}), 401
+
+    try:
+        # Fetch recent shares
+        resp = client.table("shares").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(20).execute()
+        data = getattr(resp, "data", []) if resp is not None else []
+        
+        # Build activity feed
+        activities = []
+        for share in data:
+            # Share creation activity
+            activities.append({
+                "type": "share_created",
+                "action": "Created share",
+                "item": share.get("file_name") or share.get("code", "Unknown"),
+                "code": share.get("code"),
+                "timestamp": share.get("created_at"),
+                "icon": "📤"
+            })
+            
+            # If share has views, add view activity
+            view_count = int(share.get("view_count", 0))
+            if view_count > 0:
+                activities.append({
+                    "type": "share_viewed",
+                    "action": f"Share viewed ({view_count} times)",
+                    "item": share.get("file_name") or share.get("code", "Unknown"),
+                    "code": share.get("code"),
+                    "timestamp": share.get("created_at"),
+                    "icon": "👁️"
+                })
+        
+        # Sort by timestamp (most recent first)
+        activities.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        
+        return jsonify({"activities": activities[:20]}), 200
+    except Exception as e:
+        logger.error(f"Failed to fetch activity: {e}")
+        return jsonify({"error": f"Failed to fetch activity: {e}"}), 500
+
+
+@application.route("/api/files/fetch", methods=["GET"])
+def fetch_file():
+    """Proxy file fetch endpoint. Accepts file URLs in query param 'url'.
+    Supports public Supabase storage URLs OR proxy:bucket/path format for backend storage access
     """
     file_url = request.args.get("url")
     if not file_url:

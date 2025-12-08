@@ -2,57 +2,74 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Eye, Calendar, Globe } from 'lucide-react';
+import { apiService } from '@/services/apiService';
+import type { AnalyticsData } from '@/services/types';
 
-interface AnalyticsData {
+interface ChartData {
     viewsOverTime: Array<{ date: string; views: number }>;
     topShares: Array<{ name: string; views: number; code: string }>;
     contentTypeDistribution: Array<{ name: string; value: number }>;
     totalViews: number;
     totalShares: number;
     avgViewsPerShare: number;
+    recentShares: number;
 }
 
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 
 export function AnalyticsChart() {
-    const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+    const [analytics, setAnalytics] = useState<ChartData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
 
     useEffect(() => {
-        // Mock data for now - will be replaced with real API calls
-        const mockData: AnalyticsData = {
-            viewsOverTime: [
-                { date: 'Mon', views: 45 },
-                { date: 'Tue', views: 62 },
-                { date: 'Wed', views: 38 },
-                { date: 'Thu', views: 78 },
-                { date: 'Fri', views: 95 },
-                { date: 'Sat', views: 52 },
-                { date: 'Sun', views: 41 },
-            ],
-            topShares: [
-                { name: 'project-code.js', views: 234, code: 'ABC123' },
-                { name: 'design-mockup.png', views: 189, code: 'XYZ789' },
-                { name: 'api-docs.md', views: 156, code: 'DEF456' },
-                { name: 'presentation.pdf', views: 142, code: 'GHI012' },
-                { name: 'data-export.csv', views: 98, code: 'JKL345' },
-            ],
-            contentTypeDistribution: [
-                { name: 'Code', value: 45 },
-                { name: 'Images', value: 30 },
-                { name: 'Documents', value: 15 },
-                { name: 'Text', value: 10 },
-            ],
-            totalViews: 1247,
-            totalShares: 89,
-            avgViewsPerShare: 14,
+        const fetchAnalytics = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const data: AnalyticsData = await apiService.getMyAnalytics();
+
+                // Transform views_by_date to chart format (sorted by date)
+                const viewsOverTime = Object.entries(data.views_by_date)
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .slice(-7) // Last 7 days for default view
+                    .map(([date, views]) => ({
+                        date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+                        views
+                    }));
+
+                // Transform content_types to chart format
+                const contentTypeDistribution = Object.entries(data.content_types).map(([name, value]) => ({
+                    name: name.charAt(0).toUpperCase() + name.slice(1),
+                    value
+                }));
+
+                // Transform top_shares to chart format
+                const topShares = data.top_shares.map(share => ({
+                    name: share.name,
+                    views: share.views,
+                    code: share.code
+                }));
+
+                setAnalytics({
+                    viewsOverTime,
+                    topShares,
+                    contentTypeDistribution,
+                    totalViews: data.total_views,
+                    totalShares: data.total_shares,
+                    avgViewsPerShare: data.avg_views,
+                    recentShares: data.recent_shares
+                });
+            } catch (e) {
+                console.error('Failed to fetch analytics:', e);
+                setError(e instanceof Error ? e.message : 'Failed to load analytics');
+            } finally {
+                setLoading(false);
+            }
         };
 
-        setTimeout(() => {
-            setAnalytics(mockData);
-            setLoading(false);
-        }, 500);
+        fetchAnalytics();
     }, [timeRange]);
 
     if (loading) {
@@ -64,6 +81,15 @@ export function AnalyticsChart() {
                     </Card>
                 ))}
             </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <Card className="p-8 text-center">
+                <div className="text-destructive mb-2">Failed to load analytics</div>
+                <div className="text-sm text-muted-foreground">{error}</div>
+            </Card>
         );
     }
 
@@ -132,7 +158,7 @@ export function AnalyticsChart() {
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">This Week</p>
                             <h3 className="text-3xl font-bold mt-2 bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent">
-                                411
+                                {analytics.recentShares}
                             </h3>
                             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                                 <Calendar className="w-3 h-3 text-emerald-500" />
@@ -161,8 +187,8 @@ export function AnalyticsChart() {
                                     key={range}
                                     onClick={() => setTimeRange(range)}
                                     className={`px-3 py-1 text-xs rounded-full transition-all ${timeRange === range
-                                            ? 'bg-primary text-primary-foreground shadow-lg'
-                                            : 'bg-muted hover:bg-muted/80'
+                                        ? 'bg-primary text-primary-foreground shadow-lg'
+                                        : 'bg-muted hover:bg-muted/80'
                                         }`}
                                 >
                                     {range}

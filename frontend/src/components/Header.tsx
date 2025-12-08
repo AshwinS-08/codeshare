@@ -129,6 +129,9 @@ export function Header() {
           <Link to="/docs" className="transition-colors hover:text-foreground">
             Docs
           </Link>
+          <Link to="/api-docs" className="transition-colors hover:text-foreground font-semibold text-primary">
+            API Docs 🚀
+          </Link>
           <a
             href="https://github.com/lovable-dev/project-api"
             target="_blank"

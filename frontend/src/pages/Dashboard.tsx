@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserStats } from "@/components/UserStats";
 import { UserShares } from "@/components/UserShares";
 import { AnalyticsChart } from "@/components/AnalyticsChart";
+import { ActivityFeed } from "@/components/ActivityFeed";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -174,30 +175,7 @@ export default function Dashboard() {
 
                     {/* Activity Tab */}
                     <TabsContent value="activity" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="bg-card rounded-xl border shadow-sm p-8 text-center">
-                            <Activity className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                            <h3 className="text-xl font-semibold mb-2">Activity Feed</h3>
-                            <p className="text-muted-foreground mb-6">
-                                Track all your share activities in real-time
-                            </p>
-                            <div className="space-y-4 max-w-2xl mx-auto">
-                                {[
-                                    { action: 'Created share', item: 'project-code.js', time: '2 minutes ago', icon: '📤' },
-                                    { action: 'Share viewed', item: 'design-mockup.png', time: '15 minutes ago', icon: '👁️' },
-                                    { action: 'File downloaded', item: 'api-docs.md', time: '1 hour ago', icon: '⬇️' },
-                                    { action: 'QR code generated', item: 'presentation.pdf', time: '3 hours ago', icon: '📱' },
-                                ].map((activity, i) => (
-                                    <div key={i} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                                        <span className="text-2xl">{activity.icon}</span>
-                                        <div className="flex-1 text-left">
-                                            <p className="font-medium">{activity.action}</p>
-                                            <p className="text-sm text-muted-foreground">{activity.item}</p>
-                                        </div>
-                                        <span className="text-xs text-muted-foreground">{activity.time}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <ActivityFeed />
                     </TabsContent>
                 </Tabs>
             </div>

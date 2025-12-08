@@ -9,6 +9,8 @@ import HowItWorks from "./pages/HowItWorks";
 import Features from "./pages/Features";
 import Docs from "./pages/Docs";
 import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
 import { MainLayout } from "@/components/MainLayout";
 
@@ -23,10 +25,12 @@ const App = () => (
         <Routes>
           <Route element={<MainLayout />}>
             <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/share/:code" element={<ShareView />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/features" element={<Features />} />
             <Route path="/docs" element={<Docs />} />
+            <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

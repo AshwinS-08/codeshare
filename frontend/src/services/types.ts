@@ -51,3 +51,31 @@ export interface ApiErrorResponse {
   code?: string;
   details?: Record<string, string>;
 }
+
+export interface AnalyticsData {
+  total_shares: number;
+  total_views: number;
+  avg_views: number;
+  recent_shares: number;
+  content_types: Record<string, number>;
+  views_by_date: Record<string, number>;
+  top_shares: Array<{
+    code: string;
+    views: number;
+    type: string;
+    name: string;
+  }>;
+}
+
+export interface ActivityItem {
+  type: 'share_created' | 'share_viewed';
+  action: string;
+  item: string;
+  code: string;
+  timestamp: string;
+  icon: string;
+}
+
+export interface ActivityResponse {
+  activities: ActivityItem[];
+}
