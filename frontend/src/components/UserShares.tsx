@@ -4,7 +4,7 @@ import type { UserShare } from "@/services/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Eye, Download } from "lucide-react";
+import { Copy, Eye, Download, Code, Link, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export const UserShares = () => {
@@ -92,6 +92,11 @@ export const UserShares = () => {
     toast({ title: "Link copied", description: "Share link copied to clipboard" });
   };
 
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast({ title: "Code copied", description: "Share code copied to clipboard" });
+  };
+
   const handlePreview = async (share: UserShare) => {
     if (!share.file_url) return;
     try {
@@ -135,15 +140,27 @@ export const UserShares = () => {
               <th className="px-2 py-2 text-left font-normal">Name</th>
               <th className="px-2 py-2 text-left font-normal">Size</th>
               <th className="px-2 py-2 text-left font-normal">Created</th>
-              <th className="px-2 py-2 text-left font-normal">Views</th>
-              <th className="px-2 py-2 text-right font-normal">Action</th>
+              <th className="px-2 py-2 text-left font-normal">Updated</th>
+              <th className="px-2 py-2 text-center font-normal">Views</th>
+              <th className="px-2 py-2 text-right font-normal">Actions</th>
             </tr>
           </thead>
           <tbody>
             {shares.map((share) => (
               <tr key={share.code} className="border-b last:border-0">
                 <td className="px-2 py-2 align-middle font-mono text-xs">
-                  {share.code}
+                  <div className="flex items-center gap-1">
+                    <span>{share.code}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-5 w-5 p-0 opacity-60 hover:opacity-100"
+                      onClick={() => handleCopyCode(share.code)}
+                      title="Copy Code"
+                    >
+                      <Code className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </td>
                 <td className="px-2 py-2 align-middle">
                   {share.file_name || "(text only)"}
@@ -154,41 +171,52 @@ export const UserShares = () => {
                 <td className="px-2 py-2 align-middle whitespace-nowrap">
                   {formatDate(share.created_at)}
                 </td>
+                <td className="px-2 py-2 align-middle whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-muted-foreground" />
+                    <span>{formatDate(share.updated_at || share.created_at)}</span>
+                  </div>
+                </td>
                 <td className="px-2 py-2 align-middle text-center">
-                  {share.view_count ?? 0}
+                  <div className="flex items-center justify-center gap-1">
+                    <Eye className="h-3 w-3 text-muted-foreground" />
+                    <span>{share.view_count ?? 0}</span>
+                  </div>
                 </td>
                 <td className="px-2 py-2 align-middle text-right">
-                  {share.file_url && (
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0"
-                        onClick={() => handleCopyLink(share.code)}
-                        title="Copy Link"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0"
-                        onClick={() => handlePreview(share)}
-                        title="Preview"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0"
-                        onClick={() => handleOpen(share)}
-                        title="Download"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      onClick={() => handleCopyLink(share.code)}
+                      title="Copy Share Link"
+                    >
+                      <Link className="h-4 w-4" />
+                    </Button>
+                    {share.file_url && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handlePreview(share)}
+                          title="Preview"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleOpen(share)}
+                          title="Download"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

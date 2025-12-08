@@ -482,7 +482,16 @@ def get_share(code: str):
             if not requested_password or not stored_hash or not check_password_hash(stored_hash, requested_password):
                 return jsonify({"error": "Password required or incorrect", "locked": True}), 403
 
-        # When access is allowed, include explicit locked flag in response
+        # When access is allowed, update view count and include explicit locked flag in response
+        try:
+            # Increment view count
+            client.table("shares").update({"view_count": row.get("view_count", 0) + 1, "updated_at": "now()"}).eq("code", code.upper()).execute()
+            # Update the row data with new view count
+            row["view_count"] = row.get("view_count", 0) + 1
+            row["updated_at"] = "now()"
+        except Exception as e:
+            logger.warning(f"Failed to update view count: {e}")
+        
         row["locked"] = False
         return jsonify(row), 200
     except Exception as e:
@@ -556,23 +565,11 @@ def get_my_shares():
         resp = (
             client
             .table("shares")
-            .select("code, content_type, file_name, file_size, file_url, created_at, view_count")
+            .select("code, content_type, file_name, file_size, file_url, created_at, updated_at, view_count")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
             .execute()
         )
-        data = getattr(resp, "data", []) if resp is not None else []
-        return jsonify({"shares": data}), 200
-    except Exception as e:
-        return jsonify({"error": f"Failed to fetch shares: {e}"}), 500
-
-
-@application.route("/api/files/fetch", methods=["GET"])
-def fetch_file():
-    """Fetch a file via backend to avoid exposing Supabase directly.
-
-    Query params:
-      - url: the public URL to fetch (must match configured SUPABASE_URL host)
              OR proxy:bucket/path format for backend storage access
     """
     file_url = request.args.get("url")
