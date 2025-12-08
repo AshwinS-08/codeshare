@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Code as CodeIcon, Lock, FileCode } from 'lucide-react';
+import { Upload, FileText, Code as CodeIcon, Lock, FileCode, Eye, EyeOff } from 'lucide-react';
 import { CodeDisplay } from '@/components/CodeDisplay';
 import { apiService } from '@/services/apiService';
 import MonacoEditor from '@monaco-editor/react';
@@ -43,6 +43,7 @@ export const Share = () => {
   const [code, setCode] = useState('// Enter your code here\n// Select a language from the dropdown');
   const [language, setLanguage] = useState('javascript');
   const [fileName, setFileName] = useState('script.js');
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const generateCode = () => {
@@ -65,7 +66,7 @@ export const Share = () => {
       });
       return;
     }
-    
+
     setFile(uploadedFile);
     setText(''); // Clear text when file is uploaded
     toast({
@@ -115,7 +116,7 @@ export const Share = () => {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       handleFileUpload(files[0]);
@@ -150,12 +151,12 @@ export const Share = () => {
     }
 
     setIsGenerating(true);
-    
+
     try {
       const shareCode = generateCode();
-      
+
       // Prepare the share data
-      const shareData: any = { 
+      const shareData: any = {
         text: contentToShare,
         password: isPasswordProtected ? password : undefined,
         metadata: {}
@@ -188,7 +189,7 @@ export const Share = () => {
         });
         setGeneratedCode(res.code);
       }
-      
+
       toast({ title: "Content uploaded!", description: "Your content is ready to share" });
     } catch (error) {
       toast({
@@ -232,12 +233,11 @@ export const Share = () => {
         </TabsList>
 
         <TabsContent value="file">
-          <Card 
-            className={`relative border-2 border-dashed transition-all duration-200 ${
-              isDragging 
-                ? 'border-primary bg-upload-hover' 
-                : 'border-upload-border bg-upload-area hover:border-primary/50'
-            }`}
+          <Card
+            className={`relative border-2 border-dashed transition-all duration-200 ${isDragging
+              ? 'border-primary bg-upload-hover'
+              : 'border-upload-border bg-upload-area hover:border-primary/50'
+              }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -259,9 +259,9 @@ export const Share = () => {
                 </p>
               </label>
               {file && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="mt-4"
                   onClick={() => setFile(null)}
                 >
@@ -309,7 +309,7 @@ export const Share = () => {
               </select>
             </div>
           </div>
-          
+
           <div className="rounded-md border overflow-hidden h-[300px] bg-gray-100 dark:bg-gray-800">
             <MonacoEditor
               height="100%"
@@ -360,19 +360,28 @@ export const Share = () => {
             </Label>
           </div>
           {isPasswordProtected && (
-            <Input
-              type="password"
-              placeholder="Enter a password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-2"
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter a password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-2 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 mt-1 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           )}
         </div>
 
-        <Button 
-          className="w-full" 
-          size="lg" 
+        <Button
+          className="w-full"
+          size="lg"
           onClick={handleShare}
           disabled={isGenerating || (!file && !text.trim() && !code.trim())}
         >

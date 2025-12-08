@@ -206,3 +206,41 @@ def list_bucket_objects(client: Any, bucket: str, path: str = "", limit: Optiona
         if isinstance(e, socket.gaierror):
             return None, f"DNS resolution failed: {e}"
         return None, str(e)
+
+
+def rpc_get_share_by_code(client: Any, code: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Call the Supabase RPC function 'get_share_by_code'.
+
+    Args:
+        client: Supabase client instance
+        code: The share code to look up
+
+    Returns:
+        (data, error) - data is the share dict if found, else None.
+    """
+    if client is None:
+        return None, "Client is None"
+    
+    try:
+        # The RPC expects a parameter named 'share_code' (as defined in our schema)
+        print(f"DEBUG: Calling RPC get_share_by_code with {code}")
+        resp = client.rpc("get_share_by_code", {"share_code": code}).execute()
+        print(f"DEBUG: RPC Raw Response: {resp}")
+        
+        # Extract data using our helper
+        data, err = _extract_response_data(resp)
+        print(f"DEBUG: RPC Extracted Data: {data}, Error: {err}")
+
+        if err:
+            return None, err
+            
+        # RPC returns a list of rows (even if just one)
+        if isinstance(data, list):
+            if not data:
+                return None, None # Not found
+            return data[0], None
+        return data, None
+
+    except Exception as e:
+        print(f"DEBUG: RPC Exception: {e}")
+        return None, str(e)

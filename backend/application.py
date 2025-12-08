@@ -443,35 +443,13 @@ def create_share():
         "file_url": file_info["url"],
         "file_name": file_info["name"],
         "file_size": file_info["size"],
-        "file_url": file_info["url"],
         "is_protected": is_protected,
         "password_hash": password_hash,
         "language": language,
         "metadata": metadata,
-    }
+    }), 201
 
-    if user_id:
-        payload["user_id"] = user_id
-    resp = client.table("shares").insert(payload).execute()
-    data = getattr(resp, "data", None) if resp is not None else None
-except Exception as e:
-    msg = str(e)
-    if "row level security" in msg.lower() or "42501" in msg:
-        return jsonify({"error": "Insert blocked by RLS; ensure service role key is used on the backend and policies permit insert."}), 403
-    if "401" in msg or "unauthorized" in msg.lower():
-        return jsonify({"error": "Unauthorized to insert; check SUPABASE_SERVICE_ROLE_KEY is set and valid."}), 401
-    return jsonify({"error": f"Failed to create share: {msg}"}), 500
 
-return jsonify({
-    "code": code,
-    "content_type": content_type,
-    "text_content": text_content,
-    "file_url": file_info["url"],
-    "file_name": file_info["name"],
-    "file_size": file_info["size"],
-    "row": data,
-    "status": "ok",
-}), 201
 
 
 @application.route("/api/shares/<code>", methods=["GET"])
@@ -485,20 +463,21 @@ def get_share(code: str):
 
         # Prefer calling the RPC to respect business logic (expiry/views) if defined
         row, rpc_err = rpc_get_share_by_code(client, code)
-        if rpc_err:
-            # Fallback to direct select if RPC not available or errored
+
+        # If RPC errored or returned no row, fall back to direct select.
+        # This ensures that existing rows are still accessible even if the RPC
+        # is missing, misconfigured, or filtered by RLS/expiry logic.
+        if rpc_err or not row:
             resp = client.table("shares").select("*").eq("code", code.upper()).limit(1).execute()
             data = getattr(resp, "data", []) if resp is not None else []
             if not data:
                 return jsonify({"error": "Not found"}), 404
             row = data[0]
-        # If RPC succeeded but returned no row (including all-null), treat as not found/expired
-        if not row:
-            return jsonify({"error": "Not found"}), 404
 
         # Enforce password protection if enabled
         is_protected = bool(row.get("is_protected"))
         stored_hash = row.get("password_hash")
+
         if is_protected:
             if not requested_password or not stored_hash or not check_password_hash(stored_hash, requested_password):
                 return jsonify({"error": "Password required or incorrect", "locked": True}), 403

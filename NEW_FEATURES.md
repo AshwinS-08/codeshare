@@ -60,6 +60,9 @@ This document outlines all the exciting new features that have been implemented 
 
 **Features**:
 - **Password Protection**: Secure shares with custom passwords
+  - **Password Visibility Toggle**: Eye/EyeOff icon to show/hide password input
+  - Available in both Share creation and ShareView unlock screens
+  - Enhanced UX with Enter key support for unlocking
 - **Expiry Time Options**:
   - 1 hour
   - 24 hours
@@ -281,6 +284,8 @@ import { NotificationCenter } from '@/components/NotificationCenter';
 - ✅ **Real-time Feedback**: Notifications and toast messages
 - ✅ **Responsive Design**: Works perfectly on all screen sizes
 - ✅ **Accessibility**: Proper ARIA labels and keyboard navigation
+- ✅ **Password Visibility Toggle**: Eye/EyeOff icons for better password entry
+- ✅ **Enter Key Support**: Quick unlock with Enter key on password fields
 
 ### Performance
 - ✅ **Lazy Loading**: Components load on demand

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiService, API_BASE } from '../services/apiService';
 import { QRCodeGenerator } from '@/components/QRCodeGenerator';
-import { FileText, Download, ArrowLeft, Clock, Copy, Share2, QrCode as QrCodeIcon } from 'lucide-react';
+import { FileText, Download, ArrowLeft, Clock, Copy, Share2, QrCode as QrCodeIcon, Eye, EyeOff } from 'lucide-react';
 
 interface ShareData {
   id: string;
@@ -26,11 +26,15 @@ export default function ShareView() {
   const [shareData, setShareData] = useState<ShareData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<'image' | 'pdf' | 'text' | 'other'>('other');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -53,10 +57,48 @@ export default function ShareView() {
       }
 
       try {
-        const data = await apiService.getShareByCode(code);
-        setShareData(data as unknown as ShareData);
+        setError(null);
+        setLocked(false);
+        setPasswordError(null);
+
+        const url = new URL(`${API_BASE}/api/shares/${encodeURIComponent(code)}`);
+        const res = await fetch(url.toString());
+
+        // Handle locked/password-protected shares
+        if (res.status === 403) {
+          try {
+            const json = await res.json();
+            if (json && json.locked) {
+              setLocked(true);
+              setPasswordError(json.error || 'Password required');
+              setLoading(false);
+              return;
+            }
+            setError(json?.error || 'Failed to load share');
+          } catch {
+            setError('Failed to load share');
+          }
+          setLoading(false);
+          return;
+        }
+
+        if (!res.ok) {
+          try {
+            const json = await res.json();
+            setError(json?.error || 'Failed to load share');
+          } catch {
+            setError('Failed to load share');
+          }
+          setLoading(false);
+          return;
+        }
+
+        const data = (await res.json()) as ShareData;
+        setShareData(data);
+        setLocked(false);
+        setPasswordError(null);
         setLoading(false);
-      } catch (err) {
+      } catch {
         setError('Failed to load share');
         setLoading(false);
       }
@@ -64,6 +106,58 @@ export default function ShareView() {
 
     fetchShareData();
   }, [code]);
+
+  const handleUnlock = async () => {
+    if (!code || !password) {
+      setPasswordError('Please enter a password');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setPasswordError(null);
+
+      const url = new URL(`${API_BASE}/api/shares/${encodeURIComponent(code)}`);
+      url.searchParams.set('password', password);
+      const res = await fetch(url.toString());
+
+      if (res.status === 403) {
+        try {
+          const json = await res.json();
+          if (json && json.locked) {
+            setPasswordError(json.error || 'Password required or incorrect');
+            setLoading(false);
+            return;
+          }
+          setError(json?.error || 'Failed to load share');
+        } catch {
+          setError('Failed to load share');
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (!res.ok) {
+        try {
+          const json = await res.json();
+          setError(json?.error || 'Failed to load share');
+        } catch {
+          setError('Failed to load share');
+        }
+        setLoading(false);
+        return;
+      }
+
+      const data = (await res.json()) as ShareData;
+      setShareData(data);
+      setLocked(false);
+      setPasswordError(null);
+      setLoading(false);
+    } catch {
+      setError('Failed to load share');
+      setLoading(false);
+    }
+  };
 
   // Auto-preview files by default once the share data is loaded
   useEffect(() => {
@@ -210,6 +304,60 @@ export default function ShareView() {
     return `${minutes}m remaining`;
   };
 
+  // If the share is locked and we don't yet have data, show password prompt
+  if (locked && !shareData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-4">
+          <Card className="p-6 space-y-4">
+            <div className="text-center space-y-2">
+              <div className="text-4xl">🔒</div>
+              <h1 className="text-2xl font-bold">Protected Share</h1>
+              <p className="text-muted-foreground">
+                This share is password protected. Please enter the password to view the content.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="w-full rounded-md border px-3 py-2 text-sm pr-10"
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleUnlock();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {passwordError && (
+                <p className="text-sm text-red-500">{passwordError}</p>
+              )}
+              <Button className="w-full" onClick={handleUnlock} disabled={loading}>
+                Unlock
+              </Button>
+              <Button asChild variant="ghost" className="w-full">
+                <Link to="/">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Cancel and go home
+                </Link>
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center">
@@ -218,7 +366,7 @@ export default function ShareView() {
     );
   }
 
-  if (error) {
+  if (error && !locked) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center space-y-4">

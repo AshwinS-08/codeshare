@@ -66,10 +66,23 @@ CodeShare is a secure, easy-to-use file and text sharing web application. It all
   - `GET /api/files/fetch?url=...`: Proxy download for files.
 
 ## Additional Notes
-- Shares can include optional password protection.
-- Files are uploaded to AWS S3 storage.
-- The app uses Supabase for authentication and session management.
-- Real-time updates and analytics are provided on the dashboard.
+- **Password Protection:** Shares can include optional password protection with visibility toggle for better UX.
+  - Eye/EyeOff icon to show/hide password
+  - Enter key support for quick unlock
+  - Secure password hashing with werkzeug
+- **File Storage:** Files are uploaded to AWS S3/Supabase storage.
+- **Authentication:** The app uses Supabase for authentication and session management.
+- **Real-time Analytics:** Real-time updates and analytics are provided on the dashboard.
+- **User Tracking:** Logged-in users can track all their shares and view detailed statistics.
+- **Auto-Expiration:** Shares automatically expire after 24 hours for security.
+
+## Security Features
+- 🔐 Password-protected shares with secure hashing
+- 🔑 JWT-based authentication
+- 🔒 End-to-end encryption
+- ⏰ Automatic expiration
+- 👁️ View count tracking
+- 📊 Real-time activity monitoring
 
 ---
 
