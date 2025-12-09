@@ -126,20 +126,20 @@ export function Header() {
           <Link to="/how-it-works" className="transition-colors hover:text-foreground">
             How it works
           </Link>
-          <Link to="/docs" className="transition-colors hover:text-foreground">
+          {/* <Link to="/docs" className="transition-colors hover:text-foreground">
             Docs
-          </Link>
+          </Link> */}
           <Link to="/api-docs" className="transition-colors hover:text-foreground font-semibold text-primary">
             API Docs 🚀
           </Link>
-          <a
+          {/* <a
             href="https://github.com/lovable-dev/project-api"
             target="_blank"
             rel="noopener noreferrer"
             className="transition-colors hover:text-foreground"
           >
             GitHub
-          </a>
+          </a> */}
         </nav>
 
         <div className="flex items-center gap-2 md:gap-3">
