@@ -4,27 +4,22 @@ sharing files across different devices and users through traditional methods oft
 complex login procedures, physical storage media, or platform-dependent restrictions, which 
 can be a time-consuming and cumbersome process. This project addresses these challenges 
 by developing a comprehensive, web-based system designed to automate and optimize the 
-secure sharing of files using a unique code generation mechanism. 
-The system facilitates the entire file-sharing life cycle, starting with allowing users to upload 
-valid files from any device. Upon upload, the system automatically generates a unique code 
-(UUID) and stores the mapping in the database, ensuring efficient retrieval. One of the 
-standout features of the system is its simplified user experience, which allows for the secure 
-download of files from anywhere using only the generated unique code, removing the 
-barrier of complex authentication for quick transfers. This significantly enhances the speed 
-and scalability of the process, allowing for a "upload-and-forget" workflow that ensures data 
-is accessible only to those with the correct code. 
-Furthermore, the system incorporates robust validation mechanisms, such as restricting file 
-sizes (e.g., <100MB) and handling unsupported file types to prevent errors. The web 
-application enhances the user experience through a responsive interface that manages 
-loading states and file validation for smooth interaction. By formalizing the code-based 
-retrieval process, the system ensures consistency and creates a secure environment for 
-digital asset sharing. 
-This project was implemented using FastAPI for the backend to handle high-performance API 
-endpoints, with React JS for the frontend to build a dynamic user interface, and AWS 
-(Supabase) for secure cloud storage and database management. It includes key features 
-such as API testing via Swagger UI and Postman, cross-origin communication (CORS) 
-integration, and specific endpoints for uploading and downloading to ensure reliability and 
-performance. 
+secure sharing of files and text using a unique code generation mechanism. 
+The system facilitates the entire sharing life cycle, starting with allowing users to upload 
+valid files or paste text/code from any device. Upon submission, the system automatically generates a unique code 
+(UUID/6-digit) and stores the mapping in the database. Users can optionally secure their shares with a password. 
+One of the standout features of the system is its simplified user experience, allowing for the secure 
+retrieval of data from anywhere using the generated unique code. The platform also includes a comprehensive dashboard 
+for authenticated users to track their activity, view analytics, and manage their shared content. 
+This significantly enhances the speed and scalability of the process, allowing for a "share-and-forget" workflow. 
+Furthermore, the system incorporates robust validation mechanisms, password protection for sensitive data, 
+and analytics to track views. The web application enhances the user experience through a responsive interface 
+that manages loading states, file validation, and real-time activity feeds. 
+This project was implemented using Python (Flask) for the backend to handle high-performance API 
+endpoints, with React JS for the frontend to build a dynamic user interface, and Supabase 
+(PostgreSQL & Storage) for secure cloud storage and database management. It includes key features 
+such as API testing, password protection, real-time analytics, and specific endpoints for 
+secure uploading and downloading. 
 TABLE OF CONTENTS 
 Chapter No. Title Page No. 
  ABSTRACT v 
@@ -143,22 +138,24 @@ to reject unsupported formats (e.g., .exe files) and manage storage limits effec
  Unique Code Generation: Developing a logic to generate non-colliding, unique codes 
 (UUID or 6-digit) for every upload was critical to ensure that files are retrieved 
 correctly without errors. 
- Cloud Integration: Integrating the application with AWS/Supabase for storage and 
-database management required precise environment variable configuration and secure 
-access policy implementation. 
+ Cloud Integration: Integrating the application with Supabase for storage and 
+database management required precise environment variable configuration. 
+ Password Management: Implementing secure hashing and validation flows for 
+password-protected shares. 
+ Real-time Analytics: Aggregating view counts and activity efficiently for the dashboard. 
 1.3 AIM OF THE PROJECT 
 The primary aim of this project is to develop a "Cloud Native Micro Sharing Platform" that 
 simplifies the file-sharing process through a secure, code-based system. The project goal is to 
 build a solution that is fast, scalable, secure, and easy to use . 
 The specific objectives are: 
- To implement a full-stack web application using React JS for the frontend and FastAPI 
+ To implement a full-stack web application using React JS for the frontend and Python Flask 
 for the backend. 
- To utilize AWS/Supabase for secure file storage and metadata management. 
- To develop a mechanism that generates a unique code (UUID) upon file upload, 
+ To utilize Supabase for secure file storage, authentication, and metadata management. 
+ To develop a mechanism that generates a unique code (UUID) upon upload, 
 enabling secure retrieval. 
- To create a responsive user interface that supports file validation and provides real-time 
-feedback (loading states). 
- To ensure the system is scalable and capable of handling file downloads from any 
+ To implement Password Protection for sensitive files and text shares.
+ To create a User Dashboard with real-time analytics and activity tracking.
+ To ensure the system is scalable and capable of handling file/text retrieval from any 
 location using the correct unique code. 
 1.4 CHAPTER PLAN 
 The first chapter, Introduction, deals with the overview of the project which comprises the 
@@ -189,13 +186,12 @@ which are difficult to scale.
  Cloud Native Architectures: Modern applications are increasingly moving towards 
 "Cloud Native" designs, utilizing services like AWS (Amazon Web Services) for 
 storage and databases to ensure high availability and durability. 
- Micro-services and APIs: The use of FastAPI has gained traction for its high 
-performance and ease of use in building APIs. It allows for the rapid development of 
-endpoints such as /upload and /download with automatic documentation features like 
-Swagger UI. 
+ Micro-services and APIs: The use of Flask has been chosen for its reliability 
+and flexibility in building RESTful APIs. It allows for the rapid development of 
+endpoints such as /api/shares and /api/me/analytics. 
  Frontend Technologies: React JS is widely recognized for building dynamic user 
-interfaces. Its component-based architecture allows for smooth user experiences, such 
-as handling file validation and loading states efficiently. 
+interfaces. Its component-based architecture allows for complex features like 
+Dashboards and Analytics Charts. 
 2.2 EXISTING SYSTEM 
 In the current ecosystem of file sharing, users often face a cumbersome journey. Sharing a file 
 typically involves logging into a third-party service (like Google Drive or Dropbox), navigating 
@@ -216,15 +212,15 @@ a lightweight, code-based platform. The system envisions a "Upload and Forget" w
 where the complexity of storage and retrieval is handled by unique identifiers. 
 Key Features of the Proposed System: 
  Unique Code Generation: The system automatically generates a unique code (UUID or 
-6-digit) upon file upload, serving as the only "key" needed for retrieval. 
- Secure Cloud Storage: Files are stored in a dedicated AWS Storage bucket, ensuring 
-industry-standard security and reliability. 
- Platform Independence: The system allows users to upload from any device and 
-download from anywhere using the web interface. 
- Validation & Feedback: The system includes validation for file size (< 100MB) and 
-types (rejecting .exe), providing immediate feedback to the user. 
- Scalability: Built on FastAPI and Supabase, the backend is designed to handle multiple 
-concurrent requests without performance degradation. 
+6-digit) upon upload, serving as the only "key" needed for retrieval. 
+ Password Protection: Users can optionally secure their shares with a password, which is 
+hashed and stored securely.
+ User Dashboard: Authenticated users can view analytics, track share views, and manage 
+their recent activity.
+ Text & Code Sharing: Support for sharing syntax-highlighted code snippets and plain text.
+ Secure Cloud Storage: Files are stored in Supabase Storage buckets, ensuring 
+industry-standard security. 
+ Scalability: Built on Flask and Supabase, the backend handles concurrent requests efficiently. 
 2.4 REQUIREMENTS GATHERING 
 Requirements gathering is the initial phase where the technical needs of the project are 
 identified. This ensures the system is compatible with modern web standards and development 
@@ -241,31 +237,28 @@ Frontend:
 Backend: 
 Database: 
 Storage: 
-React JS, Axios/Fetch  
-Python (FastAPI Framework)  
-Supabase / AWS RDS  
-AWS S3 Bucket / Supabase Storage  
-Testing Tools :Postman, Thunder Client, Swagger UI  
+React JS, Vite, TailwindCSS
+Python (Flask Framework)  
+Supabase (PostgreSQL)  
+Supabase Storage / AWS S3 Compatible  
+Testing Tools :Postman, Swagger UI  
 IDE: 
 VS Code 
-Deployment: Vercel / Netlify / Render  
+Deployment: Vercel / Render / AWS Elastic Beanstalk  
 2.5 FEASIBILITY STUDY 
 The feasibility study assesses the viability of the "Cloud Native Micro Sharing Platform" across 
 technical, operational, and economic dimensions. 
-Technical Feasibility The project uses a modern technology stack. React and FastAPI are open
-source, stable, and widely supported. AWS provides robust infrastructure for storage and 
-database management. The integration of these technologies is well-documented, ensuring that 
-the technical requirements for endpoints like /upload and /download/{code} can be met 
-efficiently. 
+Technical Feasibility The project uses a modern technology stack. React and Flask are 
+stable and widely supported. Supabase provides robust infrastructure for storage, auth, and 
+database management. The integration is well-documented, ensuring that endpoints for 
+Password Protection and Analytics can be met efficiently. 
 Operational Feasibility The system is designed for ease of use. The "Test Cases" indicate a 
 straightforward workflow: "Select a file -> File uploaded -> Unique code generated". This 
 simplicity ensures that non-technical users can operate the system without training. The system 
 is also Scalable and Secure, handling traffic spikes and data protection effectively. 
-Economic Feasibility The development relies on cost-effective tools. React and FastAPI are 
-free to use. Supabase and Vercel offer generous free tiers for development and small-scale 
-deployment, making the project economically viable with low initial investment costs. The 
-"Future Enhancements" like encryption and login systems can be added incrementally without 
-significant financial overhaul. 
+Economic Feasibility The development relies on cost-effective tools. React and Flask are 
+free to use. Supabase offers generous free tiers for development, making it economically viable. 
+Features like Dashboard and Analytics add high value without significant infrastructure cost. 
 Based on the objectives and future enhancements outlined in your presentation, here are the 
 Mission and Vision statements for the "Cloud Native Micro Sharing Platform." 
 I have drafted these to match the tone and format of the "FYP Manager" report, focusing on 
@@ -318,15 +311,15 @@ o Built UI for file upload, unique code display, and download input.
 o Integrated Axios/Fetch for secure API communication with the backend. 
 o Added loading states and file validation (checking size <100MB and type) for 
 smooth UX. 
-2. Backend Module (FastAPI) Responsible for the core logic, API endpoints, and database 
+2. Backend Module (Flask) Responsible for the core logic, API endpoints, and database 
 interactions. 
  Features: 
-o /upload endpoint: Receives the file from the frontend, uploads it to Supabase 
-Storage, generates a unique code (UUID / 6-digit), and stores the mapping in 
-the database. 
-o /download/{code} endpoint: Validates the provided unique code against the 
-database and returns the corresponding file if valid. 
-o Swagger UI: Auto-generated documentation for testing API endpoints. 
+o /api/shares endpoint: Handles file/text uploads, generates unique codes, and supports 
+password protection (saving hased passwords). 
+o /api/shares/{code}: Validates unique code and password (if protected) before 
+returning content. 
+o /api/me/* endpoints: Provides analytics, stats, and activity feeds for the dashboard. 
+o /api/auth/*: Handles user login and signup via Supabase. 
 3. Storage & Database Module (AWS/Supabase) Responsible for data persistence and file 
 management. 
  Features: 
@@ -348,10 +341,10 @@ to their roles .
 The main purpose of this diagram is to capture the dynamic aspects of the system and visualize 
 the functional requirements of the Cloud Native Micro Sharing Platform. 
 Actors Identified: 
- Uploader: The user who initiates the file sharing process. 
- Downloader: The user who receives the file using the unique code. 
- FastAPI Backend (System): The automated system handling validation, storage, and 
-code generation. 
+ Uploader (Guest/User): The user who initiates the sharing process (can add password). 
+ Downloader: The user who retrieves the content (must enter password if required). 
+ Dashboard User: Authenticated user viewing analytics. 
+ Flask Backend (System): The automated system handling validation, storage, auth, and logic. 
  Here are the Class Diagram, Sequence Diagram, and ER Diagram sections for your 
 report. I have formatted them exactly like the "FYP Manager" report, including the 
 standard academic definitions and the specific technical details from your "Cloud 
@@ -386,51 +379,18 @@ For the Cloud Native Micro Sharing Platform, the database (hosted on Supabase/AW
 designed to handle the critical mapping between the generated unique codes and the physical 
 file paths in the cloud storage. 
 Table 3.1 File Metadata Mapping 
-S. No Field 
-Data Type Field Size Constraint 
-1 
-id 
-UUID 
-36 
-Description 
-Primary Key 
-Unique Record ID 
-2 
-unique_code varchar 
-10 
-Unique / Not Null Generated Code (6-digit) 
-3 
-file_name 
-varchar 
-255 
-Not Null 
-Original Filename 
-4 
-file_path 
-varchar 
-255 
-Not Null 
-AWS/Supabase Bucket Path 
-5 
-file_size 
-Bigint 
-20 
-Not Null 
-Size in Bytes (<100MB) 
-6 
-file_type 
-varchar 
-50 
-Not Null 
-MIME Type (e.g., .pdf, .jpg) 
-7 
-uploaded_at timestamp - 
-Default NOW() Time of Upload 
-8 
-expires_at 
-timestamp - 
-Null 
-Optional Expiry Time 
+S. No Field       Data Type    Constraint   Description 
+1     id          UUID         PK           Unique Record ID 
+2     unique_code varchar(10)  Unique       Generated Code (6-digit) 
+3     file_name   varchar(255) Nullable     Filename (if file share) 
+4     file_path   varchar(255) Nullable     Bucket Path (if file share) 
+5     text_content Text        Nullable     Content (if text share) 
+6     content_type varchar(20) Not Null     'file' or 'text' 
+7     is_protected boolean     Default False Password Protection Flag 
+8     password_hash varchar    Nullable     Hashed Password 
+9     view_count  int          Default 0    Total Views 
+10    user_id     UUID         FK           Link to Auth User 
+11    created_at  timestamp    Default NOW  Creation Time 
 Table 3.1 describes the core table used to link the user-facing unique code with the backend 
 storage path. It includes validation fields like file_size and file_type to ensure system integrity. 
 Table 3.2 System Activity Logs 
@@ -490,16 +450,15 @@ differences, and then updates the browser's displayed DOM efficiently.
  Declarative: React makes it painless to create interactive UIs. Design simple views for 
 each state in your application, and React will efficiently update and render just the right 
 components when your data changes. 
-4.1.2 FastAPI (Backend) 
-FastAPI is a modern, fast (high-performance), web framework for building APIs with Python 
-3.7+ based on standard Python type hints. 
- Speed: It is one of the fastest Python frameworks available, on par with NodeJS and 
-Go. 
- Automatic Documentation: One of the most useful features is the automatic generation 
-of interactive API documentation (using Swagger UI) that lets developers test the API 
-directly from the browser. 
- Standard Based: Based on (and fully compatible with) the open standards for APIs: 
-OpenAPI (previously known as Swagger) and JSON Schema. 
+4.1.2 Flask (Backend) 
+Flask is a lightweight WSGI web application framework. It is designed to make getting started 
+quick and easy, with the ability to scale up to complex applications. 
+ Flexibility: Flask gives developers control over which components to use, such as 
+SQLAlchemy or Supabase clients. 
+ Security: Uses Werkzeug for password hashing (generate_password_hash) to secure 
+protected shares. 
+ Extensions: Rich ecosystem including Flask-Cors for cross-origin support and Flask-
+Limiter for rate limiting. 
 4.1.3 AWS & Supabase (Cloud Infrastructure) 
  AWS S3 (Simple Storage Service): An object storage service that offers industry
 leading scalability, data availability, security, and performance. In this project, it is used 
@@ -525,18 +484,14 @@ o POST /upload: Sends the FormData object containing the file.
 o GET /download: Sends the unique code to retrieve the file blob. 
 4. Validation: Added client-side logic to check if the file size is less than 100MB and 
 ensures the file extension is not .exe before the upload starts . 
-4.2.2 Backend Implementation (FastAPI) 
-The backend logic handles the heavy lifting of storage and code generation. 
+4.2.2 Backend Implementation (Flask) 
+The backend logic handles the heavy lifting of storage, auth, and analytics. 
 1. Endpoint Setup: 
-o Defined the /upload endpoint to accept UploadFile objects. 
-o Defined the /download/{code} endpoint to accept string parameters. 
-2. Unique Code Logic: Integrated the Python uuid library to generate unique identifiers. 
-For better user experience, a short 6-digit alphanumeric code generator was also 
-implemented for easier typing. 
-3. Storage Connection: Configured boto3 (AWS SDK for Python) to securely connect to 
-the S3 bucket using environment variables for Access Keys and Secret Keys. 
-4. Database Mapping: Implemented SQL queries to insert the record: INSERT INTO 
-mappings (code, filepath) VALUES (...) . 
+o Defined /api/shares to accept files or text, optional passwords, and metadata. 
+o Defined /api/me/* for user-specific analytics. 
+2. Security: Implemented werkzeug.security for password hashing. 
+3. Storage Connection: Configured Supabase Client to manage S3-compatible storage. 
+4. Analytics: Implemented logic to aggregate view counts and track activity logs. 
 4.2.3 System Integration 
 Once both modules were developed, they were connected. 
 1. CORS Configuration: Enabled Cross-Origin Resource Sharing (CORS) in FastAPI to 
@@ -578,10 +533,9 @@ were correctly se11nt to AWS/Supabase Storage.
 API Testing (Black Box) 
 This method treats the coded module as a black box. The module runs with inputs that are likely 
 to cause errors 12. 
- Tools Used: FastAPI Swagger UI (/docs) and Postman / Thunder Client were used to 
-manually test endpoints such as /upload and /download. This verified that the system 
-returned the correct JSON responses and error messages without inspecting the internal 
-code structure 13. 
+ Tools Used: Postman was used to test endpoints such as /api/shares and 
+/api/me/analytics. This verified that the system returned the correct JSON responses 
+(including password locks) and analytics data. 
 5.2 TEST CASES 
 A test case is a documented set of conditions or inputs along with the expected results that are 
 used to determine whether a system or application is functioning correctly14. 
@@ -590,15 +544,17 @@ Test
 Case ID Description 
 Expected Result 
 Actual Result 
-TC001 Upload a valid file (Input: 
-Select a file < 100MB) 
-File 
-File uploaded and 
-unique 
-Status 
-uploaded 
-code 
-generated 
+TC001 Upload a valid file 
+(Input: File < 100MB) 
+File uploaded, unique code generated 
+Pass 
+Code "A1B2C3" returned 
+
+TC001A Upload with Password 
+(Input: File + Password) 
+Share created, is_protected=True 
+Pass 
+Prompt for password on retrieval 
 TC002 
 Upload unsupported file 
 type (Input: Select .exe 
@@ -642,32 +598,42 @@ Prevent upload and
 show size error 
 Upload blocked, "File 
 too large" error shown Pass 
-15 
+
+TC006 Password Protection 
+(Input: File + Password) 
+File Encrypted 
+Pass 
+Password prompted on download 
+
+TC007 Dashboard Analytics 
+(Input: Auth User) 
+Show Stats 
+Pass 
+View counts match DB 
+
 5.3 OUTCOME OF THE TEST 
-The outcomes of the test for the Cloud Native Micro Sharing Platform using React and FastAPI 
+The outcomes of the test for the Cloud Native Micro Sharing Platform using React and Flask 
 were successful. 
 CHAPTER 6 
 CONCLUSION 
 6.1 CONCLUSION 
 In conclusion, the comprehensive design and development of the Cloud Native Micro Sharing 
 Platform is rooted in a user-centric approach, employing React JS for Front-End responsiveness 
-and FastAPI for Back-End efficiency. Leveraging AWS and Supabase ensures structured data 
+and Flask for Back-End efficiency. Leveraging Supabase ensures structured data 
 storage and secure file management, a critical aspect for housing essential digital assets. 
-The system's key features, such as the "Upload and Forget" workflow, unique code generation 
-(UUID), and robust file validation mechanisms, aim to optimize the file-sharing process and 
-enhance accessibility for users across different devices. The implementation of specific API 
-endpoints for uploading and downloading, combined with automated testing via Swagger UI, 
-contributes to streamlining the entire data transfer lifecycle. 
+The system's key features, such as the "Share and Forget" workflow, unique code generation 
+(UUID), password protection, and robust analytics, aim to optimize the sharing process and 
+enhance accessibility for users. The implementation of specific API endpoints, combined with 
+authenticated dashboards, contributes to streamlining the entire data transfer lifecycle. 
 The Cloud Native Micro Sharing Platform, with its simple interface and robust functionalities, 
 stands poised to revolutionize the traditional methods of file sharing. By ensuring the system 
 is Fast, Scalable, and Secure, it provides a streamlined and transparent experience for all users 
 involved . 
-6.2 FUTURE ENHANCEMENTS 
-For future enhancements, a dedicated Login System is proposed to provide users with 
-personalized dashboards and history tracking. To further secure the data transfer process, End
-to-End Encryption will be implemented, ensuring that files remain private during transit and 
-storage. 
+6.2 FUTURE ENHANCEMENTS  
+Future enhancements include implementing End-to-End Encryption for even higher security 
+within the browser (client-side encryption). 
 Additionally, the system aims to introduce Download Limits to control bandwidth usage and 
+advanced Admin Analytics. Mobile Apps could be developed using React Native to complement the web platform. 
 Real-Time Notifications to alert users when their files have been accessed. To improve user 
 convenience, a QR Code Generation feature will be developed to allow for quick mobile 
 scanning and retrieval, along with File Previews to let users verify content before downloading. 
