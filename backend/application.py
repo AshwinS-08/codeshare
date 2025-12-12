@@ -34,6 +34,8 @@ _origins.update({
     "http://127.0.0.1:8080",
     "http://localhost:8081",
     "http://127.0.0.1:8081",
+    "https://codeshare-sepia.vercel.app",
+    "https://codeshare-sepia.vercel.app/",
 })
 
 # Initialize CORS with per-route configuration
