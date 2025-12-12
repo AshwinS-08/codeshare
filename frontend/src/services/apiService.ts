@@ -5,13 +5,28 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const API_BASE: string = (import.meta as any).env?.VITE_API_BASE_URL || window.location.origin;
 
+
+export class PasswordRequiredError extends Error {
+  constructor(message: string = "Password required") {
+    super(message);
+    this.name = "PasswordRequiredError";
+  }
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let msg = `Request failed with ${res.status}`;
+    let isLocked = false;
     try {
       const json = await res.json();
       if (json?.error) msg = json.error;
+      if (json?.locked) isLocked = true;
     } catch { }
+
+    if (res.status === 403 && isLocked) {
+      throw new PasswordRequiredError(msg);
+    }
+
     throw new Error(msg);
   }
   return res.json() as Promise<T>;

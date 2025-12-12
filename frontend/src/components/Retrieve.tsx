@@ -4,8 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Download, FileText, Search, AlertCircle, Eye } from 'lucide-react';
-import { apiService } from '@/services/apiService';
+import { Download, FileText, Search, AlertCircle, Eye, Lock } from 'lucide-react';
+import { apiService, PasswordRequiredError } from '@/services/apiService';
 import type { ShareRetrieveResponse } from '@/services/types';
 
 type PreviewKind = 'image' | 'pdf' | 'text' | 'other';
@@ -17,6 +17,11 @@ export const Retrieve = () => {
   const [error, setError] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<PreviewKind>('other');
+
+  // Password protection state
+  const [isPasswordRequired, setIsPasswordRequired] = useState(false);
+  const [password, setPassword] = useState('');
+
   const { toast } = useToast();
 
   const handleRetrieve = async () => {
@@ -33,14 +38,26 @@ export const Retrieve = () => {
     setError('');
     setPreviewUrl(null);
     try {
-      const res = await apiService.getShareByCode(code.trim().toUpperCase());
+      // Pass password if required
+      const res = await apiService.getShareByCode(
+        code.trim().toUpperCase(),
+        isPasswordRequired ? password : undefined
+      );
       setShare(res);
+      setIsPasswordRequired(false); // Reset on success
+      setPassword('');
       toast({ title: 'Content retrieved!', description: 'Successfully found the shared content' });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to retrieve content. Please try again.';
-      setError(msg);
-      setShare(null);
-      toast({ title: 'Retrieval failed', description: msg, variant: 'destructive' });
+      if (err instanceof PasswordRequiredError) {
+        setIsPasswordRequired(true);
+        setError('');
+        // Don't show toast for password requirement, the UI will update
+      } else {
+        const msg = err instanceof Error ? err.message : 'Failed to retrieve content. Please try again.';
+        setError(msg);
+        setShare(null);
+        toast({ title: 'Retrieval failed', description: msg, variant: 'destructive' });
+      }
     } finally {
       setIsRetrieving(false);
     }
@@ -124,7 +141,7 @@ export const Retrieve = () => {
                 <FileText className="w-4 h-4" />
               )}
               <span>
-                {share.content_type === 'file' ? 'File' : 'Text'} • 
+                {share.content_type === 'file' ? 'File' : 'Text'} •
                 Shared on {formatDate(share.created_at)}
               </span>
             </div>
@@ -217,53 +234,105 @@ export const Retrieve = () => {
       </div>
 
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="retrieve-code" className="text-base font-medium">Enter Code</Label>
-          <Input
-            id="retrieve-code"
-            type="text"
-            placeholder="ABC123"
-            value={code}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCode(e.target.value.toUpperCase())}
-            maxLength={6}
-            className="text-center text-2xl font-mono tracking-wider h-14 rounded-xl border-muted-foreground/20"
-          />
-        </div>
-
-        {error && (
-          <Card className="p-4 bg-destructive/10 border-destructive/20 rounded-xl">
-            <div className="flex items-start gap-2 text-destructive">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <p className="text-sm">{error}</p>
+        {isPasswordRequired ? (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <Card className="p-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center text-amber-600 dark:text-amber-500">
+                  <Lock className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg text-amber-800 dark:text-amber-200">Password Protected</h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    This content is protected. Please enter the password to view it.
+                  </p>
+                </div>
+                <div className="max-w-xs mx-auto space-y-2">
+                  <Input
+                    type="password"
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-white dark:bg-slate-950"
+                    onKeyDown={(e) => e.key === 'Enter' && handleRetrieve()}
+                  />
+                  <Button
+                    onClick={handleRetrieve}
+                    className="w-full"
+                    disabled={isRetrieving || !password}
+                  >
+                    {isRetrieving ? 'Unlocking...' : 'Unlock Content'}
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsPasswordRequired(false);
+                    setPassword('');
+                    setError('');
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </Card>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="retrieve-code" className="text-base font-medium">Enter Code</Label>
+              <Input
+                id="retrieve-code"
+                type="text"
+                placeholder="ABC123"
+                value={code}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCode(e.target.value.toUpperCase())}
+                maxLength={6}
+                className="text-center text-2xl font-mono tracking-wider h-14 rounded-xl border-muted-foreground/20"
+                onKeyDown={(e) => e.key === 'Enter' && handleRetrieve()}
+              />
             </div>
-          </Card>
+
+            {error && (
+              <Card className="p-4 bg-destructive/10 border-destructive/20 rounded-xl animate-in fade-in duration-300">
+                <div className="flex items-start gap-2 text-destructive">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm">{error}</p>
+                </div>
+              </Card>
+            )}
+
+            <Button
+              onClick={handleRetrieve}
+              disabled={isRetrieving || code.length !== 6}
+              className="w-full h-12 text-lg font-medium rounded-xl shadow-md hover:shadow-lg transition-shadow"
+              size="lg"
+            >
+              {isRetrieving ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Retrieving...
+                </>
+              ) : (
+                <>
+                  <Search className="w-5 h-5 mr-2" />
+                  Retrieve Content
+                </>
+              )}
+            </Button>
+          </>
         )}
-
-        <Button 
-          onClick={handleRetrieve}
-          disabled={isRetrieving || code.length !== 6}
-          className="w-full h-12 text-lg font-medium rounded-xl shadow-md hover:shadow-lg transition-shadow"
-          size="lg"
-        >
-          {isRetrieving ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              Retrieving...
-            </>
-          ) : (
-            <>
-              <Search className="w-5 h-5 mr-2" />
-              Retrieve Content
-            </>
-          )}
-        </Button>
       </div>
 
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">
-          Codes are case-insensitive and expire after 24 hours
-        </p>
-      </div>
+      {!isPasswordRequired && (
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            Codes are case-insensitive and expire after 24 hours
+          </p>
+        </div>
+      )}
     </div>
   );
 };
